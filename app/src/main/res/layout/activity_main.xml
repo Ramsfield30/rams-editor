@@ -6,65 +6,71 @@
     android:layout_height="match_parent"
     android:background="#1E1E1E">
 
-    <LinearLayout
+    <HorizontalScrollView
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:background="#2D2D2D"
-        android:orientation="horizontal"
-        android:padding="4dp"
+        android:scrollbars="none"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:id="@+id/fileName"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="untitled.html"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:gravity="center_vertical"
-            android:paddingStart="12dp"/>
-
-        <Button
-            android:id="@+id/btnNew"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:text="New"
-            android:textSize="12sp"
-            android:backgroundTint="#3C3C3C"
-            android:textColor="#FFFFFF"/>
+            android:orientation="horizontal"
+            android:padding="4dp">
 
-        <Button
-            android:id="@+id/btnOpen"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="Open"
-            android:textSize="12sp"
-            android:backgroundTint="#3C3C3C"
-            android:textColor="#FFFFFF"/>
+            <TextView
+                android:id="@+id/fileName"
+                android:layout_width="120dp"
+                android:layout_height="match_parent"
+                android:text="untitled.html"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:gravity="center_vertical"
+                android:paddingStart="8dp"/>
 
-        <Button
-            android:id="@+id/btnSave"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="Save"
-            android:textSize="12sp"
-            android:backgroundTint="#4CAF50"
-            android:textColor="#FFFFFF"/>
+            <Button
+                android:id="@+id/btnNew"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="New"
+                android:textSize="12sp"
+                android:backgroundTint="#3C3C3C"
+                android:textColor="#FFFFFF"/>
 
-        <Button
-            android:id="@+id/btnRun"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="▶"
-            android:textSize="16sp"
-            android:backgroundTint="#2196F3"
-            android:textColor="#FFFFFF"/>
+            <Button
+                android:id="@+id/btnOpen"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="Open"
+                android:textSize="12sp"
+                android:backgroundTint="#3C3C3C"
+                android:textColor="#FFFFFF"/>
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="Save"
+                android:textSize="12sp"
+                android:backgroundTint="#4CAF50"
+                android:textColor="#FFFFFF"/>
+
+            <Button
+                android:id="@+id/btnRun"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="▶"
+                android:textSize="16sp"
+                android:backgroundTint="#2196F3"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
+
+    </HorizontalScrollView>
 
     <ScrollView
         android:id="@+id/scrollView"

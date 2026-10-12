@@ -9,7 +9,7 @@ import android.view.View
 import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
+import android.widget.TextView
 
 class FloatingPreview(private val context: Context) {
 
@@ -20,14 +20,14 @@ class FloatingPreview(private val context: Context) {
     private var isShowing = false
 
     private val params = WindowManager.LayoutParams(
-        800, 650,
+        600, 500,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
         PixelFormat.TRANSLUCENT
     ).apply {
-        gravity = Gravity.TOP or Gravity.START
-        x = 100
-        y = 200
+        gravity = Gravity.TOP or Gravity.END
+        x = 16
+        y = 100
     }
 
     fun show(htmlContent: String) {
@@ -46,12 +46,12 @@ class FloatingPreview(private val context: Context) {
             loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
         }
 
-        val btnClose = floatingView?.findViewById<Button>(R.id.btnClose)
+        val btnClose = floatingView?.findViewById<TextView>(R.id.btnClose)
         btnClose?.setOnClickListener { dismiss() }
 
-        val btnFullscreen = floatingView?.findViewById<Button>(R.id.btnFullscreen)
+        val btnFullscreen = floatingView?.findViewById<TextView>(R.id.btnFullscreen)
         btnFullscreen?.setOnClickListener {
-            // Will implement fullscreen in next version
+            // fullscreen coming in v2
         }
 
         setupDrag()
