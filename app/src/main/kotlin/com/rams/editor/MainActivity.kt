@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
@@ -36,6 +37,20 @@ class MainActivity : AppCompatActivity() {
 
         // Set default starter code
         codeEditor.setCode(getStarterCode())
+
+        // Request storage permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                intent.data = Uri.parse("package:$packageName")
+                startActivityForResult(intent, 200)
+            }
+        } else {
+            requestPermissions(
+                arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                200
+            )
+        }
 
         btnNew.setOnClickListener {
             FileManager.newFile(this) { name, content ->
