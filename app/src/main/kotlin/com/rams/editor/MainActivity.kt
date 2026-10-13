@@ -4,7 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
@@ -21,6 +22,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnRun: Button
 
     private var floatingPreview: FloatingPreview? = null
+    private val autoSaveHandler = Handler(Looper.getMainLooper())
+    private var autoSaveRunnable: Runnable? = null
+    private var hasUnsavedChanges = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,12 +39,9 @@ class MainActivity : AppCompatActivity() {
 
         floatingPreview = FloatingPreview(this)
 
-        // Set default starter code
-        codeEditor.setCode(getStarterCode())
-
         // Request storage permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
+            if (!android.os.Environment.isExternalStorageManager()) {
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                 intent.data = Uri.parse("package:$packageName")
                 startActivityForResult(intent, 200)
@@ -52,10 +53,13 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+        codeEditor.setCode(getStarterCode())
+
         btnNew.setOnClickListener {
             FileManager.newFile(this) { name, content ->
                 fileName.text = name
                 codeEditor.setCode(content)
+                hasUnsavedChanges = false
             }
         }
 
@@ -63,12 +67,12 @@ class MainActivity : AppCompatActivity() {
             FileManager.openFile(this) { name, content ->
                 fileName.text = name
                 codeEditor.setCode(content)
+                hasUnsavedChanges = false
             }
         }
 
         btnSave.setOnClickListener {
-            FileManager.saveFile(this, codeEditor.getCode())
-            fileName.text = FileManager.getCurrentFileName()
+            saveCurrentFile()
         }
 
         btnRun.setOnClickListener {
@@ -76,10 +80,38 @@ class MainActivity : AppCompatActivity() {
         }
 
         codeEditor.setOnTextChangedListener { code ->
+            hasUnsavedChanges = true
+            updateTitleWithDot()
             if (floatingPreview?.isVisible() == true) {
                 floatingPreview?.update(code)
             }
+            scheduleAutoSave(code)
         }
+    }
+
+    private fun updateTitleWithDot() {
+        val name = FileManager.getCurrentFileName()
+        if (!fileName.text.toString().startsWith("●")) {
+            fileName.text = "● $name"
+        }
+    }
+
+    private fun scheduleAutoSave(code: String) {
+        autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
+        autoSaveRunnable = Runnable {
+            if (hasUnsavedChanges && FileManager.getCurrentFileName() != "untitled.html") {
+                FileManager.saveFile(this, code)
+                hasUnsavedChanges = false
+                fileName.text = FileManager.getCurrentFileName()
+            }
+        }
+        autoSaveHandler.postDelayed(autoSaveRunnable!!, 2000)
+    }
+
+    private fun saveCurrentFile() {
+        FileManager.saveFile(this, codeEditor.getCode())
+        fileName.text = FileManager.getCurrentFileName()
+        hasUnsavedChanges = false
     }
 
     private fun checkOverlayPermission() {
@@ -115,6 +147,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
         floatingPreview?.dismiss()
         super.onDestroy()
     }
