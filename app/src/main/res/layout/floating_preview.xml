@@ -4,85 +4,105 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1A1A2E"
-    android:padding="8dp">
+    android:background="@drawable/preview_container"
+    android:padding="0dp">
 
-    <!-- Phone frame top bar -->
+    <!-- Preview toolbar -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:background="#252540"
+        android:layout_height="32dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="8dp"
-        android:paddingEnd="4dp">
-
-        <!-- Fake camera dot -->
-        <View
-            android:layout_width="8dp"
-            android:layout_height="8dp"
-            android:background="#3A3A5C"
-            android:layout_marginEnd="8dp"/>
+        android:paddingEnd="4dp"
+        android:background="#1A1A2E">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="Preview"
-            android:textColor="#8888AA"
-            android:textSize="12sp"
+            android:textColor="#6666AA"
+            android:textSize="11sp"
             android:gravity="center_vertical"/>
 
         <TextView
             android:id="@+id/btnFullscreen"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:text="⛶"
-            android:textSize="16sp"
-            android:textColor="#8888AA"
+            android:textSize="14sp"
+            android:textColor="#6666AA"
             android:gravity="center"/>
 
         <TextView
             android:id="@+id/btnClose"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:text="✕"
-            android:textSize="16sp"
-            android:textColor="#FF5555"
+            android:textSize="14sp"
+            android:textColor="#FF5F57"
             android:gravity="center"/>
 
     </LinearLayout>
 
-    <!-- Phone screen border -->
+    <!-- Phone mockup -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#000000"
-        android:background="@drawable/preview_container"
-        android:padding="3dp"
-        android:layout_marginTop="2dp">
+        android:orientation="vertical"
+        android:background="@drawable/phone_frame"
+        android:margin="6dp">
 
+        <!-- Status bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:background="#000000"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="9:41"
+                android:textColor="#FFFFFF"
+                android:textSize="9sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▌▌▌"
+                android:textColor="#FFFFFF"
+                android:textSize="7sp"/>
+
+        </LinearLayout>
+
+        <!-- WebView -->
         <WebView
             android:id="@+id/previewWebView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
 
-    </LinearLayout>
+        <!-- Home bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:background="#000000"
+            android:gravity="center">
 
-    <!-- Phone bottom bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="24dp"
-        android:background="#252540"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginTop="2dp">
+            <View
+                android:layout_width="40dp"
+                android:layout_height="3dp"
+                android:background="#444444"/>
 
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
-            android:background="#3A3A5C"/>
+        </LinearLayout>
 
     </LinearLayout>
 
