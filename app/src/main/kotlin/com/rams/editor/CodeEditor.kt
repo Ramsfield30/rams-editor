@@ -50,23 +50,20 @@ class CodeEditor @JvmOverloads constructor(
         addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // Auto indent
-                if (count == 1 && s != null && start > 0) {
-                    if (s[start] == '\n') {
-                        val lines = s.substring(0, start).split("\n")
-                        val lastLine = lines.lastOrNull() ?: ""
-                        val indent = lastLine.takeWhile { it == ' ' || it == '\t' }
-                        val extraIndent = if (lastLine.trimEnd().endsWith("{") ||
-                            lastLine.trimEnd().endsWith(">")) "    " else ""
-                        if (indent.isNotEmpty() || extraIndent.isNotEmpty()) {
-                            post {
-                                val pos = selectionStart
-                                text?.insert(pos, indent + extraIndent)
-                            }
-                        }
-                    }
+    if (count == 1 && s != null && start > 0) {
+        if (s[start] == '\n') {
+            val lines = s.substring(0, start).split("\n")
+            val lastLine = lines.lastOrNull() ?: ""
+            val indent = lastLine.takeWhile { it == ' ' || it == '\t' }
+            if (indent.isNotEmpty()) {
+                post {
+                    val pos = selectionStart
+                    text?.insert(pos, indent)
                 }
             }
+        }
+    }
+}
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
                     removeTextChangedListener(this)
