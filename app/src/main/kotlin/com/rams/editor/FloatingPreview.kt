@@ -20,14 +20,14 @@ class FloatingPreview(private val context: Context) {
     private var isShowing = false
 
     private val params = WindowManager.LayoutParams(
-    620, 550,
+    500, 700,
     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
     PixelFormat.TRANSLUCENT
 ).apply {
     gravity = Gravity.TOP or Gravity.START
     x = 20
-    y = 100
+    y = 80
 }
 
     fun show(htmlContent: String) {

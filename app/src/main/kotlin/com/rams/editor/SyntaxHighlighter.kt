@@ -52,7 +52,7 @@ object SyntaxHighlighter {
     private fun highlightHtml(text: Spannable) {
         applyPattern(text, "<!--[\\s\\S]*?-->", COLOR_COMMENT)
         applyPattern(text, "<!DOCTYPE[^>]*>", COLOR_DOCTYPE)
-        applyPattern(text, "</?[a-zA-Z][a-zA-Z0-9]*", COLOR_HTML_TAG)
+        applyPattern(text, "</?[a-zA-Z!][a-zA-Z0-9]*", COLOR_HTML_TAG)
         applyPattern(text, "/?>", COLOR_HTML_TAG)
         applyPattern(text, "\\s[a-zA-Z-]+(?==)", COLOR_HTML_ATTR)
         applyPattern(text, "\"[^\"]*\"|'[^']*'", COLOR_STRING)

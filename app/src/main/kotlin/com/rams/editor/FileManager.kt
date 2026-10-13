@@ -82,14 +82,13 @@ object FileManager {
                         val file = File(getEditorDir(), name)
                         file.writeText(content)
                         currentFile = file
-                        Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
+                        
                     }
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
         } else {
             currentFile!!.writeText(content)
-            Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
         }
     }
 

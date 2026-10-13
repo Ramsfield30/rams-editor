@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Rect
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
@@ -38,6 +37,14 @@ class CodeEditor @JvmOverloads constructor(
     private val lineNumberWidth = 90f
     private var onTextChangedListener: ((String) -> Unit)? = null
     private var currentLine = 0
+    private var isAutoCompleting = false
+
+    // Self-closing tags that should NOT get closing tag
+    private val selfClosingTags = setOf(
+        "br", "hr", "img", "input", "meta", "link",
+        "area", "base", "col", "embed", "param", "source",
+        "track", "wbr", "!DOCTYPE"
+    )
 
     init {
         setPadding(lineNumberWidth.toInt() + 16, 16, 16, 16)
@@ -48,23 +55,104 @@ class CodeEditor @JvmOverloads constructor(
         highlightColor = Color.parseColor("#264F78")
 
         addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-    if (count == 1 && s != null && start > 0) {
-        if (s[start] == '\n') {
-            val lines = s.substring(0, start).split("\n")
-            val lastLine = lines.lastOrNull() ?: ""
-            val indent = lastLine.takeWhile { it == ' ' || it == '\t' }
-            if (indent.isNotEmpty()) {
-                post {
-                    val pos = selectionStart
-                    text?.insert(pos, indent)
+            override fun beforeTextChanged(
+                s: CharSequence?, start: Int,
+                count: Int, after: Int
+            ) {}
+
+            override fun onTextChanged(
+                s: CharSequence?, start: Int,
+                before: Int, count: Int
+            ) {
+                if (isAutoCompleting) return
+                if (count == 1 && s != null) {
+                    val char = s[start]
+                    when {
+                        // Auto indent on Enter
+                        char == '\n' -> {
+                            val textBefore = s.substring(0, start)
+                            val lines = textBefore.split("\n")
+                            val lastLine = lines.lastOrNull() ?: ""
+                            val indent = lastLine.takeWhile {
+                                it == ' ' || it == '\t'
+                            }
+                            val trimmed = lastLine.trimEnd()
+                            val extraIndent = if (
+                                trimmed.endsWith(">") &&
+                                !trimmed.matches(Regex(".*</[^>]+>$")) &&
+                                !trimmed.matches(Regex(".*<(${selfClosingTags.joinToString("|")})[^>]*/?>$"))
+                            ) "    " else ""
+
+                            if (indent.isNotEmpty() || extraIndent.isNotEmpty()) {
+                                isAutoCompleting = true
+                                post {
+                                    val pos = selectionStart
+                                    text?.insert(pos, indent + extraIndent)
+                                    isAutoCompleting = false
+                                }
+                            }
+                        }
+
+                        // Auto close HTML tags when > is typed
+                        char == '>' -> {
+                            val textBefore = s.substring(0, start + 1)
+                            val tagMatch = Regex("<([a-zA-Z][a-zA-Z0-9]*)([^>]*)>$")
+                                .find(textBefore)
+                            if (tagMatch != null) {
+                                val tagName = tagMatch.groupValues[1].lowercase()
+                                val attrs = tagMatch.groupValues[2]
+                                if (tagName !in selfClosingTags &&
+                                    !attrs.endsWith("/")
+                                ) {
+                                    isAutoCompleting = true
+                                    post {
+                                        val pos = selectionStart
+                                        text?.insert(pos, "</$tagName>")
+                                        setSelection(pos)
+                                        isAutoCompleting = false
+                                    }
+                                }
+                            }
+                        }
+
+                        // Auto close braces
+                        char == '{' -> {
+                            isAutoCompleting = true
+                            post {
+                                val pos = selectionStart
+                                text?.insert(pos, "}")
+                                setSelection(pos)
+                                isAutoCompleting = false
+                            }
+                        }
+
+                        // Auto close brackets
+                        char == '(' -> {
+                            isAutoCompleting = true
+                            post {
+                                val pos = selectionStart
+                                text?.insert(pos, ")")
+                                setSelection(pos)
+                                isAutoCompleting = false
+                            }
+                        }
+
+                        // Auto close quotes
+                        char == '"' -> {
+                            isAutoCompleting = true
+                            post {
+                                val pos = selectionStart
+                                text?.insert(pos, "\"")
+                                setSelection(pos)
+                                isAutoCompleting = false
+                            }
+                        }
+                    }
                 }
             }
-        }
-    }
-}
+
             override fun afterTextChanged(s: Editable?) {
+                if (isAutoCompleting) return
                 s?.let {
                     removeTextChangedListener(this)
                     SyntaxHighlighter.highlight(it)
@@ -79,7 +167,8 @@ class CodeEditor @JvmOverloads constructor(
     private fun updateCurrentLine() {
         val pos = selectionStart
         if (pos < 0) return
-        val textBefore = text.toString().substring(0, minOf(pos, text?.length ?: 0))
+        val textBefore = text.toString()
+            .substring(0, minOf(pos, text?.length ?: 0))
         currentLine = textBefore.count { it == '\n' }
         invalidate()
     }
@@ -90,21 +179,21 @@ class CodeEditor @JvmOverloads constructor(
         val lineHeight = lineHeight.toFloat()
         val paddingTop = paddingTop.toFloat()
 
-        // Draw line number background
+        // Line number background
         canvas.drawRect(
             0f, 0f,
             lineNumberWidth, height.toFloat(),
             lineNumberBgPaint
         )
 
-        // Draw divider
+        // Divider
         canvas.drawLine(
             lineNumberWidth, 0f,
             lineNumberWidth, height.toFloat(),
             lineNumberDividerPaint
         )
 
-        // Draw current line highlight
+        // Current line highlight
         val currentLineY = paddingTop + (currentLine * lineHeight)
         canvas.drawRect(
             0f, currentLineY,
@@ -112,19 +201,14 @@ class CodeEditor @JvmOverloads constructor(
             currentLinePaint
         )
 
-        // Draw line numbers
+        // Line numbers
         for (i in lines.indices) {
             val lineNumber = (i + 1).toString()
             val y = paddingTop + (i * lineHeight) + textSize * 1.2f
-
-            // Highlight current line number
-            if (i == currentLine) {
-                lineNumberPaint.color = Color.parseColor("#C6C6C6")
-            } else {
-                lineNumberPaint.color = Color.parseColor("#858585")
-            }
-
-            // Right align line numbers
+            lineNumberPaint.color = if (i == currentLine)
+                Color.parseColor("#C6C6C6")
+            else
+                Color.parseColor("#858585")
             val textWidth = lineNumberPaint.measureText(lineNumber)
             canvas.drawText(
                 lineNumber,
