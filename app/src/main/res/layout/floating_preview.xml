@@ -53,7 +53,7 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:background="@drawable/phone_frame"
-        android:margin="6dp">
+        android:layout_margin="6dp">
 
         <!-- Status bar -->
         <LinearLayout
