@@ -20,7 +20,7 @@ class FloatingPreview(private val context: Context) {
     private var isShowing = false
 
     private val params = WindowManager.LayoutParams(
-    500, 700,
+    420, 560,
     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
     PixelFormat.TRANSLUCENT
