@@ -41,10 +41,15 @@ class FloatingPreview(private val context: Context) {
 
         webView = floatingView?.findViewById(R.id.previewWebView)
         webView?.apply {
-            webViewClient = WebViewClient()
-            settings.javaScriptEnabled = true
-            loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
-        }
+    webViewClient = WebViewClient()
+    settings.javaScriptEnabled = true
+    settings.useWideViewPort = false
+    settings.loadWithOverviewMode = false
+    settings.setSupportZoom(true)
+    settings.builtInZoomControls = true
+    settings.displayZoomControls = false
+    loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+}
 
         val btnClose = floatingView?.findViewById<TextView>(R.id.btnClose)
         btnClose?.setOnClickListener { dismiss() }
