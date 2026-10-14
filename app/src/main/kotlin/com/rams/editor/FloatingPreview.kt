@@ -44,8 +44,8 @@ class FloatingPreview(private val context: Context) {
     webViewClient = WebViewClient()
     settings.javaScriptEnabled = true
     settings.useWideViewPort = true
-settings.loadWithOverviewMode = true
-settings.initialScale = 100
+    settings.loadWithOverviewMode = true
+    settings.initialScale = 100
     settings.setSupportZoom(true)
     settings.builtInZoomControls = true
     settings.displayZoomControls = false
