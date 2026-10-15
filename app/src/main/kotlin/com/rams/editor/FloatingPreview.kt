@@ -21,13 +21,15 @@ class FloatingPreview(private val context: Context) {
     private var floatingView: View? = null
     private var webView: WebView? = null
     private var isShowing = false
+    private var isInteractive = false
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockRunnable: Runnable? = null
 
     private val params = WindowManager.LayoutParams(
         360, 500,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
         PixelFormat.TRANSLUCENT
     ).apply {
         gravity = Gravity.TOP or Gravity.START
@@ -48,13 +50,12 @@ class FloatingPreview(private val context: Context) {
         webView?.apply {
             webViewClient = WebViewClient()
             settings.javaScriptEnabled = true
-            settings.useWideViewPort = true
+            settings.useWideViewPort = false
             settings.loadWithOverviewMode = false
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.textZoom = 100
-            // Clip WebView to rounded corners
             clipToOutline = true
             loadDataWithBaseURL(
                 null,
@@ -86,7 +87,7 @@ class FloatingPreview(private val context: Context) {
         }
         clockHandler.post(clockRunnable!!)
 
-        setupDrag()
+        setupTouch()
         windowManager.addView(floatingView, params)
         isShowing = true
     }
@@ -120,23 +121,27 @@ class FloatingPreview(private val context: Context) {
         }
     }
 
-    fun dismiss() {
-        if (isShowing && floatingView != null) {
-            clockRunnable?.let { clockHandler.removeCallbacks(it) }
-            windowManager.removeView(floatingView)
-            floatingView = null
-            webView = null
-            isShowing = false
+    private fun setInteractive(interactive: Boolean) {
+        if (isInteractive == interactive) return
+        isInteractive = interactive
+        if (interactive) {
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+        } else {
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+        }
+        if (isShowing) {
+            windowManager.updateViewLayout(floatingView, params)
         }
     }
 
-    fun isVisible() = isShowing
-
-    private fun setupDrag() {
+    private fun setupTouch() {
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
+        var isDragging = false
 
         floatingView?.setOnTouchListener { _, event ->
             when (event.action) {
@@ -145,16 +150,48 @@ class FloatingPreview(private val context: Context) {
                     initialY = params.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isDragging = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(floatingView, params)
+                    val dx = event.rawX - initialTouchX
+                    val dy = event.rawY - initialTouchY
+                    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                        isDragging = true
+                        setInteractive(false)
+                        params.x = initialX + dx.toInt()
+                        params.y = initialY + dy.toInt()
+                        windowManager.updateViewLayout(floatingView, params)
+                    }
                     true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        // Single tap — toggle interactive mode
+                        setInteractive(!isInteractive)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_OUTSIDE -> {
+                    // Tapped outside — give focus back to editor
+                    setInteractive(false)
+                    false
                 }
                 else -> false
             }
         }
     }
+
+    fun dismiss() {
+        if (isShowing && floatingView != null) {
+            clockRunnable?.let { clockHandler.removeCallbacks(it) }
+            windowManager.removeView(floatingView)
+            floatingView = null
+            webView = null
+            isShowing = false
+            isInteractive = false
+        }
+    }
+
+    fun isVisible() = isShowing
 }

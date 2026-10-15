@@ -7,35 +7,53 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.Gravity
+import android.view.LayoutInflater
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var codeEditor: CodeEditor
     private lateinit var fileName: TextView
-    private lateinit var btnNew: Button
-    private lateinit var btnOpen: Button
     private lateinit var btnSave: Button
     private lateinit var btnRun: Button
+    private lateinit var btnMenu: TextView
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var tabContainer: LinearLayout
+    private lateinit var fileTreeRecycler: RecyclerView
+    private lateinit var projectName: TextView
 
     private var floatingPreview: FloatingPreview? = null
     private val autoSaveHandler = Handler(Looper.getMainLooper())
     private var autoSaveRunnable: Runnable? = null
     private var hasUnsavedChanges = false
 
+    private val openTabs = mutableListOf<File>()
+    private var currentTabIndex = -1
+    private lateinit var fileTreeAdapter: FileTreeAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Init views
         codeEditor = findViewById(R.id.codeEditor)
         fileName = findViewById(R.id.fileName)
-        btnNew = findViewById(R.id.btnNew)
-        btnOpen = findViewById(R.id.btnOpen)
         btnSave = findViewById(R.id.btnSave)
         btnRun = findViewById(R.id.btnRun)
+        btnMenu = findViewById(R.id.btnMenu)
+        drawerLayout = findViewById(R.id.drawerLayout)
+        tabContainer = findViewById(R.id.tabContainer)
+        fileTreeRecycler = findViewById(R.id.fileTreeRecycler)
+        projectName = findViewById(R.id.projectName)
 
         floatingPreview = FloatingPreview(this)
 
@@ -53,21 +71,43 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        codeEditor.setCode(getStarterCode())
+        // Setup file tree
+        fileTreeAdapter = FileTreeAdapter(
+            emptyList(),
+            onFileClick = { file -> openFileInTab(file) },
+            onFolderClick = { node ->
+                node.isExpanded = !node.isExpanded
+                val nodes = ProjectManager.refreshTree()
+                fileTreeAdapter.updateNodes(nodes)
+            }
+        )
+        fileTreeRecycler.layoutManager = LinearLayoutManager(this)
+        fileTreeRecycler.adapter = fileTreeAdapter
 
-        btnNew.setOnClickListener {
-            FileManager.newFile(this) { name, content ->
-                fileName.text = name
-                codeEditor.setCode(content)
-                hasUnsavedChanges = false
+        // Hamburger menu
+        btnMenu.setOnClickListener {
+            if (drawerLayout.isDrawerOpen(Gravity.START)) {
+                drawerLayout.closeDrawer(Gravity.START)
+            } else {
+                drawerLayout.openDrawer(Gravity.START)
             }
         }
 
-        btnOpen.setOnClickListener {
-            FileManager.openFile(this) { name, content ->
-                fileName.text = name
-                codeEditor.setCode(content)
-                hasUnsavedChanges = false
+        // New file from drawer
+        findViewById<TextView>(R.id.btnNewFile).setOnClickListener {
+            ProjectManager.createNewFile(this) { file ->
+                openFileInTab(file)
+                fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+                drawerLayout.closeDrawer(Gravity.START)
+            }
+        }
+
+        // New project from drawer
+        findViewById<TextView>(R.id.btnNewFolder).setOnClickListener {
+            ProjectManager.createNewProject(this) { name, nodes ->
+                projectName.text = name.uppercase()
+                fileTreeAdapter.updateNodes(nodes)
+                drawerLayout.closeDrawer(Gravity.START)
             }
         }
 
@@ -87,10 +127,108 @@ class MainActivity : AppCompatActivity() {
             }
             scheduleAutoSave(code)
         }
+
+        // Load default starter
+        codeEditor.setCode(getStarterCode())
+
+        // Auto open last project
+        ProjectManager.openProject(this) { name, nodes ->
+            projectName.text = name.uppercase()
+            fileTreeAdapter.updateNodes(nodes)
+        }
+    }
+
+    private fun openFileInTab(file: File) {
+        // Check if already open
+        val existingIndex = openTabs.indexOf(file)
+        if (existingIndex != -1) {
+            switchToTab(existingIndex)
+            return
+        }
+
+        // Save current tab content
+        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+        }
+
+        openTabs.add(file)
+        currentTabIndex = openTabs.size - 1
+        addTabView(file, currentTabIndex)
+        codeEditor.setCode(file.readText())
+        fileName.text = file.name
+        hasUnsavedChanges = false
+        drawerLayout.closeDrawer(Gravity.START)
+    }
+
+    private fun addTabView(file: File, index: Int) {
+        val tabView = LayoutInflater.from(this)
+            .inflate(R.layout.tab_item, tabContainer, false)
+
+        tabView.findViewById<TextView>(R.id.tabFileName).text = file.name
+        tabView.setOnClickListener { switchToTab(index) }
+
+        tabView.findViewById<TextView>(R.id.tabClose).setOnClickListener {
+            closeTab(index)
+        }
+
+        tabContainer.addView(tabView)
+        updateTabHighlight()
+    }
+
+    private fun switchToTab(index: Int) {
+        if (index < 0 || index >= openTabs.size) return
+
+        // Save current
+        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+        }
+
+        currentTabIndex = index
+        val file = openTabs[index]
+        codeEditor.setCode(file.readText())
+        fileName.text = file.name
+        hasUnsavedChanges = false
+        updateTabHighlight()
+    }
+
+    private fun closeTab(index: Int) {
+        if (index < 0 || index >= openTabs.size) return
+        openTabs.removeAt(index)
+        tabContainer.removeViewAt(index)
+
+        if (openTabs.isEmpty()) {
+            currentTabIndex = -1
+            fileName.text = "untitled.html"
+            codeEditor.setCode(getStarterCode())
+        } else {
+            val newIndex = if (index >= openTabs.size) openTabs.size - 1 else index
+            switchToTab(newIndex)
+        }
+        updateTabHighlight()
+    }
+
+    private fun updateTabHighlight() {
+        for (i in 0 until tabContainer.childCount) {
+            val tab = tabContainer.getChildAt(i)
+            if (i == currentTabIndex) {
+                tab.setBackgroundColor(
+                    android.graphics.Color.parseColor("#1E1E1E")
+                )
+                tab.findViewById<TextView>(R.id.tabFileName)
+                    .setTextColor(android.graphics.Color.WHITE)
+            } else {
+                tab.setBackgroundColor(
+                    android.graphics.Color.parseColor("#2D2D2D")
+                )
+                tab.findViewById<TextView>(R.id.tabFileName)
+                    .setTextColor(android.graphics.Color.parseColor("#888888"))
+            }
+        }
     }
 
     private fun updateTitleWithDot() {
-        val name = FileManager.getCurrentFileName()
+        val name = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+            openTabs[currentTabIndex].name else "untitled.html"
         if (!fileName.text.toString().startsWith("●")) {
             fileName.text = "● $name"
         }
@@ -99,19 +237,25 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleAutoSave(code: String) {
         autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
         autoSaveRunnable = Runnable {
-            if (hasUnsavedChanges && FileManager.getCurrentFileName() != "untitled.html") {
-                FileManager.saveFile(this, code)
+            if (hasUnsavedChanges && currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+                openTabs[currentTabIndex].writeText(code)
                 hasUnsavedChanges = false
-                fileName.text = FileManager.getCurrentFileName()
+                fileName.text = openTabs[currentTabIndex].name
             }
         }
         autoSaveHandler.postDelayed(autoSaveRunnable!!, 2000)
     }
 
     private fun saveCurrentFile() {
-        FileManager.saveFile(this, codeEditor.getCode())
-        fileName.text = FileManager.getCurrentFileName()
-        hasUnsavedChanges = false
+        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+            fileName.text = openTabs[currentTabIndex].name
+            hasUnsavedChanges = false
+        } else {
+            FileManager.saveFile(this, codeEditor.getCode())
+            fileName.text = FileManager.getCurrentFileName()
+            hasUnsavedChanges = false
+        }
     }
 
     private fun checkOverlayPermission() {
@@ -137,13 +281,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 100) {
-            showPreview()
-        }
+        if (requestCode == 100) showPreview()
     }
 
     private fun showPreview() {
         floatingPreview?.show(codeEditor.getCode())
+    }
+
+    override fun onPause() {
+        super.onPause()
+        floatingPreview?.dismiss()
     }
 
     override fun onDestroy() {
@@ -151,20 +298,12 @@ class MainActivity : AppCompatActivity() {
         floatingPreview?.dismiss()
         super.onDestroy()
     }
-    
-    override fun onPause() {
-    super.onPause()
-    floatingPreview?.dismiss()
-}
-
-    override fun onResume() {
-    super.onResume()
-}
 
     private fun getStarterCode(): String {
         return """<!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
             background: #1e1e1e;
