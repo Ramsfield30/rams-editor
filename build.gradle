@@ -5,11 +5,8 @@ google()
 mavenCentral()
 }
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.core:core-ktx:1.12.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.recyclerview:recyclerview:1.3.0'
-    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+classpath 'com.android.tools.build:gradle:8.3.0'
+classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 }
 }
 
