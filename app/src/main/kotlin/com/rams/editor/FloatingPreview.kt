@@ -28,8 +28,9 @@ class FloatingPreview(private val context: Context) {
     private val params = WindowManager.LayoutParams(
         360, 500,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+        WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
         PixelFormat.TRANSLUCENT
     ).apply {
         gravity = Gravity.TOP or Gravity.START
@@ -74,7 +75,6 @@ class FloatingPreview(private val context: Context) {
             // fullscreen in v2
         }
 
-        // Start clock
         val timeView = floatingView?.findViewById<TextView>(R.id.previewTime)
         clockRunnable = object : Runnable {
             override fun run() {
@@ -126,10 +126,12 @@ class FloatingPreview(private val context: Context) {
         isInteractive = interactive
         if (interactive) {
             params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
         } else {
-            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
         }
         if (isShowing) {
             windowManager.updateViewLayout(floatingView, params)
@@ -158,7 +160,6 @@ class FloatingPreview(private val context: Context) {
                     val dy = event.rawY - initialTouchY
                     if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
                         isDragging = true
-                        setInteractive(false)
                         params.x = initialX + dx.toInt()
                         params.y = initialY + dy.toInt()
                         windowManager.updateViewLayout(floatingView, params)
@@ -167,13 +168,11 @@ class FloatingPreview(private val context: Context) {
                 }
                 MotionEvent.ACTION_UP -> {
                     if (!isDragging) {
-                        // Single tap — toggle interactive mode
                         setInteractive(!isInteractive)
                     }
                     true
                 }
                 MotionEvent.ACTION_OUTSIDE -> {
-                    // Tapped outside — give focus back to editor
                     setInteractive(false)
                     false
                 }

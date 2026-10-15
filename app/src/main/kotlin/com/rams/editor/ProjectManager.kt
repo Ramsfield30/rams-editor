@@ -13,7 +13,6 @@ data class FileNode(
 object ProjectManager {
 
     private var currentProjectDir: File? = null
-    private var onProjectChangedListener: ((List<FileNode>) -> Unit)? = null
 
     fun openProject(context: Context, onComplete: (String, List<FileNode>) -> Unit) {
         val rootDir = getRamsEditorDir()
@@ -24,15 +23,26 @@ object ProjectManager {
             return
         }
 
-        val names = dirs.map { it.name }.toTypedArray()
+        val options = arrayOf("Open Existing", "Create New")
         android.app.AlertDialog.Builder(context)
-            .setTitle("Open Project")
-            .setItems(names) { _, index ->
-                currentProjectDir = dirs[index]
-                val nodes = buildFileTree(dirs[index])
-                onComplete(dirs[index].name, nodes)
+            .setTitle("Projects")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        val names = dirs.map { it.name }.toTypedArray()
+                        android.app.AlertDialog.Builder(context)
+                            .setTitle("Open Project")
+                            .setItems(names) { _, index ->
+                                currentProjectDir = dirs[index]
+                                val nodes = buildFileTree(dirs[index])
+                                onComplete(dirs[index].name, nodes)
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
+                    1 -> createNewProject(context, onComplete)
+                }
             }
-            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -52,7 +62,6 @@ object ProjectManager {
                 if (name.isNotEmpty()) {
                     val projectDir = File(getRamsEditorDir(), name)
                     projectDir.mkdirs()
-                    // Create default index.html
                     val indexFile = File(projectDir, "index.html")
                     indexFile.writeText(getDefaultHtml())
                     currentProjectDir = projectDir
@@ -105,10 +114,6 @@ object ProjectManager {
     }
 
     fun getCurrentProject(): File? = currentProjectDir
-
-    fun setOnProjectChangedListener(listener: (List<FileNode>) -> Unit) {
-        onProjectChangedListener = listener
-    }
 
     fun refreshTree(): List<FileNode> {
         return currentProjectDir?.let { buildFileTree(it) } ?: emptyList()
