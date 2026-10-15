@@ -2,6 +2,8 @@ package com.rams.editor
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -10,6 +12,7 @@ import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
+import java.util.Calendar
 
 class FloatingPreview(private val context: Context) {
 
@@ -18,11 +21,13 @@ class FloatingPreview(private val context: Context) {
     private var floatingView: View? = null
     private var webView: WebView? = null
     private var isShowing = false
+    private val clockHandler = Handler(Looper.getMainLooper())
+    private var clockRunnable: Runnable? = null
 
     private val params = WindowManager.LayoutParams(
-        420, 560,
+        360, 500,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         PixelFormat.TRANSLUCENT
     ).apply {
         gravity = Gravity.TOP or Gravity.START
@@ -49,6 +54,8 @@ class FloatingPreview(private val context: Context) {
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.textZoom = 100
+            // Clip WebView to rounded corners
+            clipToOutline = true
             loadDataWithBaseURL(
                 null,
                 injectViewport(htmlContent),
@@ -66,6 +73,19 @@ class FloatingPreview(private val context: Context) {
             // fullscreen in v2
         }
 
+        // Start clock
+        val timeView = floatingView?.findViewById<TextView>(R.id.previewTime)
+        clockRunnable = object : Runnable {
+            override fun run() {
+                val cal = Calendar.getInstance()
+                val h = cal.get(Calendar.HOUR_OF_DAY)
+                val m = cal.get(Calendar.MINUTE)
+                timeView?.text = String.format("%02d:%02d", h, m)
+                clockHandler.postDelayed(this, 30000)
+            }
+        }
+        clockHandler.post(clockRunnable!!)
+
         setupDrag()
         windowManager.addView(floatingView, params)
         isShowing = true
@@ -82,7 +102,7 @@ class FloatingPreview(private val context: Context) {
     }
 
     private fun injectViewport(html: String): String {
-        val viewport = """<meta name="viewport" content="width=360, initial-scale=1.0, maximum-scale=1.0">"""
+        val viewport = """<meta name="viewport" content="width=360, initial-scale=1.0, maximum-scale=3.0">"""
         return when {
             html.contains("<head>", ignoreCase = true) -> {
                 html.replaceFirst(
@@ -102,6 +122,7 @@ class FloatingPreview(private val context: Context) {
 
     fun dismiss() {
         if (isShowing && floatingView != null) {
+            clockRunnable?.let { clockHandler.removeCallbacks(it) }
             windowManager.removeView(floatingView)
             floatingView = null
             webView = null

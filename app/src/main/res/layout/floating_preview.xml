@@ -69,6 +69,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:id="@+id/previewTime"
                 android:text="9:41"
                 android:textColor="#FFFFFF"
                 android:textSize="9sp"

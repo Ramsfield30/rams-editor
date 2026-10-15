@@ -151,6 +151,15 @@ class MainActivity : AppCompatActivity() {
         floatingPreview?.dismiss()
         super.onDestroy()
     }
+    
+    override fun onPause() {
+    super.onPause()
+    floatingPreview?.dismiss()
+}
+
+    override fun onResume() {
+    super.onResume()
+}
 
     private fun getStarterCode(): String {
         return """<!DOCTYPE html>
