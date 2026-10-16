@@ -70,29 +70,43 @@ class CodeEditor @JvmOverloads constructor(
                     when {
                         // Auto indent on Enter
                         char == '\n' -> {
-                            val textBefore = s.substring(0, start)
-                            val lines = textBefore.split("\n")
-                            val lastLine = lines.lastOrNull() ?: ""
-                            val indent = lastLine.takeWhile {
-                                it == ' ' || it == '\t'
-                            }
-                            val trimmed = lastLine.trimEnd()
-                            val extraIndent = if (
-                                trimmed.endsWith(">") &&
-                                !trimmed.matches(Regex(".*</[^>]+>$")) &&
-                                !trimmed.matches(Regex(".*<(${selfClosingTags.joinToString("|")})[^>]*/?>$"))
-                            ) "    " else ""
+    val textBefore = s.substring(0, start)
+    val textAfter = if (start + 1 < s.length) s.substring(start + 1) else ""
+    val lines = textBefore.split("\n")
+    val lastLine = lines.lastOrNull() ?: ""
+    val indent = lastLine.takeWhile { it == ' ' || it == '\t' }
+    val trimmed = lastLine.trimEnd()
 
-                            if (indent.isNotEmpty() || extraIndent.isNotEmpty()) {
-                                isAutoCompleting = true
-                                post {
-                                    val pos = selectionStart
-                                    text?.insert(pos, indent + extraIndent)
-                                    isAutoCompleting = false
-                                }
-                            }
-                        }
+    val endsWithOpenTag = trimmed.endsWith(">") &&
+        !trimmed.matches(Regex(".*</[^>]+>$")) &&
+        !trimmed.matches(Regex(".*<(${selfClosingTags.joinToString("|")})[^>]*/?>$"))
 
+    val nextIsClosingTag = textAfter.trimStart().startsWith("</")
+
+    when {
+        endsWithOpenTag && nextIsClosingTag -> {
+            // Cursor between <head> and </head>
+            // Result: <head>\n    |\n</head>
+            isAutoCompleting = true
+            post {
+                val pos = selectionStart
+                val innerIndent = indent + "    "
+                text?.insert(pos, innerIndent + "\n" + indent)
+                setSelection(pos + innerIndent.length)
+                isAutoCompleting = false
+            }
+        }
+        indent.isNotEmpty() || endsWithOpenTag -> {
+            val extraIndent = if (endsWithOpenTag) "    " else ""
+            isAutoCompleting = true
+            post {
+                val pos = selectionStart
+                text?.insert(pos, indent + extraIndent)
+                isAutoCompleting = false
+            }
+        }
+    }
+}
                         // Auto close HTML tags when > is typed
                         char == '>' -> {
                             val textBefore = s.substring(0, start + 1)

@@ -132,10 +132,13 @@ class MainActivity : AppCompatActivity() {
         codeEditor.setCode(getStarterCode())
 
         // Auto open last project
-        ProjectManager.openProject(this) { name, nodes ->
-            projectName.text = name.uppercase()
-            fileTreeAdapter.updateNodes(nodes)
-        }
+        // Delay project dialog so UI loads first
+        Handler(Looper.getMainLooper()).postDelayed({
+    ProjectManager.openProject(this) { name, nodes ->
+        projectName.text = name.uppercase()
+        fileTreeAdapter.updateNodes(nodes)
+    }
+}, 800)
     }
 
     private fun openFileInTab(file: File) {

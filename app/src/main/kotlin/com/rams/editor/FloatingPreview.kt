@@ -25,12 +25,12 @@ class FloatingPreview(private val context: Context) {
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockRunnable: Runnable? = null
 
+    // Default — NOT focusable so keyboard stays with editor
     private val params = WindowManager.LayoutParams(
         360, 500,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-        WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
         PixelFormat.TRANSLUCENT
     ).apply {
         gravity = Gravity.TOP or Gravity.START
@@ -51,7 +51,7 @@ class FloatingPreview(private val context: Context) {
         webView?.apply {
             webViewClient = WebViewClient()
             settings.javaScriptEnabled = true
-            settings.useWideViewPort = false
+            settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
@@ -103,7 +103,8 @@ class FloatingPreview(private val context: Context) {
     }
 
     private fun injectViewport(html: String): String {
-        val viewport = """<meta name="viewport" content="width=360, initial-scale=1.0, maximum-scale=3.0">"""
+        // Use device-width so content adapts to actual WebView size
+        val viewport = """<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0">"""
         return when {
             html.contains("<head>", ignoreCase = true) -> {
                 html.replaceFirst(
@@ -124,14 +125,14 @@ class FloatingPreview(private val context: Context) {
     private fun setInteractive(interactive: Boolean) {
         if (isInteractive == interactive) return
         isInteractive = interactive
-        if (interactive) {
-            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+        // Interactive — allow touch inside preview (forms, buttons)
+        // Non-interactive — keyboard stays with editor
+        params.flags = if (interactive) {
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         } else {
-            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         }
         if (isShowing) {
             windowManager.updateViewLayout(floatingView, params)
@@ -173,6 +174,7 @@ class FloatingPreview(private val context: Context) {
                     true
                 }
                 MotionEvent.ACTION_OUTSIDE -> {
+                    // Tapped outside — give keyboard back to editor
                     setInteractive(false)
                     false
                 }
