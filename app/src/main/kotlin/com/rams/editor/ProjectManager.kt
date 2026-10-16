@@ -1,7 +1,6 @@
 package com.rams.editor
 
 import android.content.Context
-import android.os.Environment
 import java.io.File
 
 data class FileNode(
@@ -13,9 +12,15 @@ data class FileNode(
 object ProjectManager {
 
     private var currentProjectDir: File? = null
+    private var appContext: Context? = null
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
+    }
 
     fun openProject(context: Context, onComplete: (String, List<FileNode>) -> Unit) {
-        val rootDir = getRamsEditorDir()
+        init(context)
+        val rootDir = getRamsEditorDir(context)
         val dirs = rootDir.listFiles()?.filter { it.isDirectory }
 
         if (dirs.isNullOrEmpty()) {
@@ -60,7 +65,7 @@ object ProjectManager {
             .setPositiveButton("Create") { _, _ ->
                 val name = input.text.toString().trim()
                 if (name.isNotEmpty()) {
-                    val projectDir = File(getRamsEditorDir(), name)
+                    val projectDir = File(getRamsEditorDir(context), name)
                     projectDir.mkdirs()
                     val indexFile = File(projectDir, "index.html")
                     indexFile.writeText(getDefaultHtml())
@@ -74,7 +79,7 @@ object ProjectManager {
     }
 
     fun createNewFile(context: Context, onComplete: (File) -> Unit) {
-        val dir = currentProjectDir ?: getRamsEditorDir()
+        val dir = currentProjectDir ?: getRamsEditorDir(context)
         val input = android.widget.EditText(context)
         input.hint = "filename.html"
 
@@ -119,11 +124,10 @@ object ProjectManager {
         return currentProjectDir?.let { buildFileTree(it) } ?: emptyList()
     }
 
-    private fun getRamsEditorDir(): File {
-        val dir = File(
-            Environment.getExternalStorageDirectory(),
-            "RamsEditor"
-        )
+    // App-scoped storage — no permission needed
+    // Path: /sdcard/Android/data/com.rams.editor/files/RamsEditor/
+    fun getRamsEditorDir(context: Context): File {
+        val dir = File(context.getExternalFilesDir(null), "RamsEditor")
         if (!dir.exists()) dir.mkdirs()
         return dir
     }
