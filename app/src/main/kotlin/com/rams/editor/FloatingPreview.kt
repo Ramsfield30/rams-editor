@@ -26,16 +26,16 @@ class FloatingPreview(private val context: Context) {
     private var clockRunnable: Runnable? = null
 
     private val params = WindowManager.LayoutParams(
-        360, 500,
-        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-        PixelFormat.TRANSLUCENT
-    ).apply {
-        gravity = Gravity.TOP or Gravity.START
-        x = 20
-        y = 80
-    }
+    420, 600,
+    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+    PixelFormat.TRANSLUCENT
+).apply {
+    gravity = Gravity.TOP or Gravity.START
+    x = 20
+    y = 80
+}
 
     fun show(htmlContent: String) {
         if (isShowing) {
@@ -93,15 +93,17 @@ class FloatingPreview(private val context: Context) {
     }
 
     fun update(htmlContent: String) {
-        webView?.loadDataWithBaseURL(
-            null,
-            injectViewport(htmlContent),
-            "text/html",
-            "UTF-8",
-            null
-        )
-    }
-
+    val injected = injectViewport(htmlContent)
+    val escaped = injected
+        .replace("\\", "\\\\")
+        .replace("'", "\\'")
+        .replace("\n", "\\n")
+        .replace("\r", "")
+    webView?.evaluateJavascript(
+        "document.open('text/html');document.write('$escaped');document.close();",
+        null
+    )
+}
     private fun injectViewport(html: String): String {
         val viewport = """<meta name="viewport" content="width=device-width, initial-scale=1.0">"""
         return when {
