@@ -50,6 +50,10 @@ object ProjectManager {
             }
             .show()
     }
+    
+    fun setCurrentProject(dir: File) {
+    currentProjectDir = dir
+}
 
     fun createNewProject(context: Context, onComplete: (String, List<FileNode>) -> Unit) {
         val input = android.widget.EditText(context)
@@ -78,8 +82,8 @@ object ProjectManager {
             .show()
     }
 
-    fun createNewFile(context: Context, onComplete: (File) -> Unit) {
-        val dir = currentProjectDir ?: getRamsEditorDir(context)
+   fun createNewFile(context: Context, parentDir: File? = null, onComplete: (File) -> Unit) {
+    val dir = parentDir ?: currentProjectDir ?: getRamsEditorDir(context)
         val input = android.widget.EditText(context)
         input.hint = "filename.html"
 

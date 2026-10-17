@@ -65,12 +65,12 @@ class MainActivity : AppCompatActivity() {
                 node.isExpanded = !node.isExpanded
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
             },
-            onNewFileInFolder = { folder ->
-                ProjectManager.createNewFile(this, folder) { file ->
-                    openFileInTab(file)
-                    fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
-                }
-            },
+            onNewFileInFolder = { folder: File ->
+    ProjectManager.createNewFile(this, folder) { file ->
+        openFileInTab(file)
+        fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+    }
+},
             onNewFolderInFolder = { folder ->
                 createNewFolder(folder)
             },
