@@ -102,21 +102,22 @@ object ProjectManager {
             .show()
     }
 
-    fun buildFileTree(dir: File, depth: Int = 0): List<FileNode> {
-        val nodes = mutableListOf<FileNode>()
-        val files = dir.listFiles()?.sortedWith(
-            compareBy({ !it.isDirectory }, { it.name })
-        ) ?: return nodes
+   fun buildFileTree(dir: File, depth: Int = 0): List<FileNode> {
+    val nodes = mutableListOf<FileNode>()
+    val files = dir.listFiles()?.sortedWith(
+        compareBy({ !it.isDirectory }, { it.name })
+    ) ?: return nodes
 
-        for (file in files) {
-            val node = FileNode(file, depth)
-            nodes.add(node)
-            if (file.isDirectory && node.isExpanded) {
-                nodes.addAll(buildFileTree(file, depth + 1))
-            }
+    for (file in files) {
+        // Auto expand first level
+        val node = FileNode(file, depth, isExpanded = depth == 0 && file.isDirectory)
+        nodes.add(node)
+        if (file.isDirectory && node.isExpanded) {
+            nodes.addAll(buildFileTree(file, depth + 1))
         }
-        return nodes
     }
+    return nodes
+}
 
     fun getCurrentProject(): File? = currentProjectDir
 

@@ -10,7 +10,11 @@ import java.io.File
 class FileTreeAdapter(
     private var nodes: List<FileNode>,
     private val onFileClick: (File) -> Unit,
-    private val onFolderClick: (FileNode) -> Unit
+    private val onFolderClick: (FileNode) -> Unit,
+    var onNewFileInFolder: ((File) -> Unit)? = null,
+    var onNewFolderInFolder: ((File) -> Unit)? = null,
+    var onRename: ((File) -> Unit)? = null,
+    var onDelete: ((File) -> Unit)? = null
 ) : RecyclerView.Adapter<FileTreeAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -52,6 +56,12 @@ class FileTreeAdapter(
                 onFileClick(node.file)
             }
         }
+
+        // Long press or ... menu
+        holder.itemView.setOnLongClickListener {
+            showContextMenu(holder.itemView, node)
+            true
+        }
     }
 
     override fun getItemCount() = nodes.size
@@ -59,6 +69,38 @@ class FileTreeAdapter(
     fun updateNodes(newNodes: List<FileNode>) {
         nodes = newNodes
         notifyDataSetChanged()
+    }
+    
+    private fun showContextMenu(view: View, node: FileNode) {
+        val popup = android.widget.PopupMenu(view.context, view)
+        if (node.file.isDirectory) {
+            popup.menu.add("New File")
+            popup.menu.add("New Folder")
+            popup.menu.add("Rename")
+            popup.menu.add("Delete")
+        } else {
+            popup.menu.add("Rename")
+            popup.menu.add("Delete")
+            popup.menu.add("Copy Path")
+        }
+        popup.setOnMenuItemClickListener { item ->
+            when (item.title) {
+                "New File" -> onNewFileInFolder?.invoke(node.file)
+                "New Folder" -> onNewFolderInFolder?.invoke(node.file)
+                "Rename" -> onRename?.invoke(node.file)
+                "Delete" -> onDelete?.invoke(node.file)
+                "Copy Path" -> {
+                    val clipboard = view.context.getSystemService(
+                        android.content.Context.CLIPBOARD_SERVICE
+                    ) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(
+                        android.content.ClipData.newPlainText("path", node.file.absolutePath)
+                    )
+                }
+            }
+            true
+        }
+        popup.show()
     }
 
     private fun getFileIcon(fileName: String): String {
