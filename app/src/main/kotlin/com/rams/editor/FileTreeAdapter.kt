@@ -1,8 +1,12 @@
 package com.rams.editor
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
@@ -21,6 +25,7 @@ class FileTreeAdapter(
         val fileName: TextView = view.findViewById(R.id.treeFileName)
         val fileIcon: TextView = view.findViewById(R.id.treeFileIcon)
         val indentView: View = view.findViewById(R.id.treeIndent)
+        val menuBtn: TextView = view.findViewById(R.id.treeItemMenu)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -33,12 +38,10 @@ class FileTreeAdapter(
         val node = nodes[position]
         holder.fileName.text = node.file.name
 
-        // Set indent based on depth
         val params = holder.indentView.layoutParams
         params.width = node.depth * 24
         holder.indentView.layoutParams = params
 
-        // Set icon based on type
         if (node.file.isDirectory) {
             holder.fileIcon.text = if (node.isExpanded) "▾" else "▸"
             holder.fileIcon.setTextColor(
@@ -49,17 +52,18 @@ class FileTreeAdapter(
             }
         } else {
             holder.fileIcon.text = getFileIcon(node.file.name)
-            holder.fileIcon.setTextColor(
-                android.graphics.Color.parseColor("#7EC8E3")
-            )
+            holder.fileIcon.setTextColor(getFileIconColor(node.file.name))
             holder.itemView.setOnClickListener {
                 onFileClick(node.file)
             }
         }
 
-        // Long press or ... menu
+        holder.menuBtn.setOnClickListener {
+            showContextMenu(it, node)
+        }
+
         holder.itemView.setOnLongClickListener {
-            showContextMenu(holder.itemView, node)
+            showContextMenu(it, node)
             true
         }
     }
@@ -70,9 +74,9 @@ class FileTreeAdapter(
         nodes = newNodes
         notifyDataSetChanged()
     }
-    
+
     private fun showContextMenu(view: View, node: FileNode) {
-        val popup = android.widget.PopupMenu(view.context, view)
+        val popup = PopupMenu(view.context, view)
         if (node.file.isDirectory) {
             popup.menu.add("New File")
             popup.menu.add("New Folder")
@@ -90,11 +94,10 @@ class FileTreeAdapter(
                 "Rename" -> onRename?.invoke(node.file)
                 "Delete" -> onDelete?.invoke(node.file)
                 "Copy Path" -> {
-                    val clipboard = view.context.getSystemService(
-                        android.content.Context.CLIPBOARD_SERVICE
-                    ) as android.content.ClipboardManager
+                    val clipboard = view.context
+                        .getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(
-                        android.content.ClipData.newPlainText("path", node.file.absolutePath)
+                        ClipData.newPlainText("path", node.file.absolutePath)
                     )
                 }
             }
@@ -113,6 +116,25 @@ class FileTreeAdapter(
             fileName.endsWith(".kt") -> "K"
             fileName.endsWith(".py") -> "P"
             else -> "F"
+        }
+    }
+
+    private fun getFileIconColor(fileName: String): Int {
+        return when {
+            fileName.endsWith(".html") ->
+                android.graphics.Color.parseColor("#E8834A")
+            fileName.endsWith(".css") ->
+                android.graphics.Color.parseColor("#2196F3")
+            fileName.endsWith(".js") ->
+                android.graphics.Color.parseColor("#F0C040")
+            fileName.endsWith(".json") ->
+                android.graphics.Color.parseColor("#A8C070")
+            fileName.endsWith(".kt") ->
+                android.graphics.Color.parseColor("#A97BFF")
+            fileName.endsWith(".py") ->
+                android.graphics.Color.parseColor("#4CAF50")
+            else ->
+                android.graphics.Color.parseColor("#CCCCCC")
         }
     }
 }

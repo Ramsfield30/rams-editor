@@ -1,5 +1,6 @@
 package com.rams.editor
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -44,7 +45,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Init views
         codeEditor = findViewById(R.id.codeEditor)
         fileName = findViewById(R.id.fileName)
         btnSave = findViewById(R.id.btnSave)
@@ -57,29 +57,25 @@ class MainActivity : AppCompatActivity() {
 
         floatingPreview = FloatingPreview(this)
 
-        // Request storage permission
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!android.os.Environment.isExternalStorageManager()) {
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.data = Uri.parse("package:$packageName")
-                startActivityForResult(intent, 200)
-            }
-        } else {
-            requestPermissions(
-                arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                200
-            )
-        }
-
         // Setup file tree
         fileTreeAdapter = FileTreeAdapter(
             emptyList(),
             onFileClick = { file -> openFileInTab(file) },
             onFolderClick = { node ->
                 node.isExpanded = !node.isExpanded
-                val nodes = ProjectManager.refreshTree()
-                fileTreeAdapter.updateNodes(nodes)
-            }
+                fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+            },
+            onNewFileInFolder = { folder ->
+                ProjectManager.createNewFile(this, folder) { file ->
+                    openFileInTab(file)
+                    fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+                }
+            },
+            onNewFolderInFolder = { folder ->
+                createNewFolder(folder)
+            },
+            onRename = { file -> renameFile(file) },
+            onDelete = { file -> deleteFile(file) }
         )
         fileTreeRecycler.layoutManager = LinearLayoutManager(this)
         fileTreeRecycler.adapter = fileTreeAdapter
@@ -104,7 +100,7 @@ class MainActivity : AppCompatActivity() {
 
         // New project from drawer
         findViewById<TextView>(R.id.btnNewFolder).setOnClickListener {
-            ProjectManager.createNewProject(this) { name, nodes ->
+            ProjectManager.openProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
                 fileTreeAdapter.updateNodes(nodes)
                 drawerLayout.closeDrawer(Gravity.START)
@@ -123,37 +119,127 @@ class MainActivity : AppCompatActivity() {
             hasUnsavedChanges = true
             updateTitleWithDot()
             if (floatingPreview?.isVisible() == true) {
-                floatingPreview?.update(code)
+                val baseUrl = if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+                    "file://${openTabs[currentTabIndex].parent}/"
+                } else null
+                floatingPreview?.update(code, baseUrl)
             }
             scheduleAutoSave(code)
         }
 
-        // Load default starter
         codeEditor.setCode(getStarterCode())
 
-        // Auto open last project
-        // Delay project dialog so UI loads first
+        // Restore last session silently
         Handler(Looper.getMainLooper()).postDelayed({
-    ProjectManager.openProject(this) { name, nodes ->
-        projectName.text = name.uppercase()
-        fileTreeAdapter.updateNodes(nodes)
+            restoreLastSession()
+        }, 300)
     }
-}, 800)
+
+    private fun restoreLastSession() {
+        val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+        val lastProjectPath = prefs.getString("last_project", null)
+        val lastFilePath = prefs.getString("last_file", null)
+
+        if (lastProjectPath != null) {
+            val projectDir = File(lastProjectPath)
+            if (projectDir.exists()) {
+                ProjectManager.setCurrentProject(projectDir)
+                projectName.text = projectDir.name.uppercase()
+                fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+                if (lastFilePath != null) {
+                    val lastFile = File(lastFilePath)
+                    if (lastFile.exists()) {
+                        openFileInTab(lastFile)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun saveSession() {
+        val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        ProjectManager.getCurrentProject()?.let {
+            editor.putString("last_project", it.absolutePath)
+        }
+        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+            editor.putString("last_file", openTabs[currentTabIndex].absolutePath)
+        }
+        editor.apply()
+    }
+
+    private fun createNewFolder(parentDir: File) {
+        val input = android.widget.EditText(this)
+        input.hint = "Folder name"
+        val layout = LinearLayout(this)
+        layout.setPadding(50, 20, 50, 20)
+        layout.addView(input)
+        android.app.AlertDialog.Builder(this)
+            .setTitle("New Folder")
+            .setView(layout)
+            .setPositiveButton("Create") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    File(parentDir, name).mkdirs()
+                    fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun renameFile(file: File) {
+        val input = android.widget.EditText(this)
+        input.setText(file.name)
+        val layout = LinearLayout(this)
+        layout.setPadding(50, 20, 50, 20)
+        layout.addView(input)
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Rename")
+            .setView(layout)
+            .setPositiveButton("Rename") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isNotEmpty()) {
+                    val newFile = File(file.parent, newName)
+                    file.renameTo(newFile)
+                    // Update open tabs
+                    val tabIndex = openTabs.indexOf(file)
+                    if (tabIndex != -1) {
+                        openTabs[tabIndex] = newFile
+                        tabContainer.getChildAt(tabIndex)
+                            ?.findViewById<TextView>(R.id.tabFileName)
+                            ?.text = newName
+                    }
+                    fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun deleteFile(file: File) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Delete ${file.name}?")
+            .setMessage("This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                file.deleteRecursively()
+                val tabIndex = openTabs.indexOf(file)
+                if (tabIndex != -1) closeTab(tabIndex)
+                fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun openFileInTab(file: File) {
-        // Check if already open
         val existingIndex = openTabs.indexOf(file)
         if (existingIndex != -1) {
             switchToTab(existingIndex)
             return
         }
-
-        // Save current tab content
         if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
             openTabs[currentTabIndex].writeText(codeEditor.getCode())
         }
-
         openTabs.add(file)
         currentTabIndex = openTabs.size - 1
         addTabView(file, currentTabIndex)
@@ -166,26 +252,20 @@ class MainActivity : AppCompatActivity() {
     private fun addTabView(file: File, index: Int) {
         val tabView = LayoutInflater.from(this)
             .inflate(R.layout.tab_item, tabContainer, false)
-
         tabView.findViewById<TextView>(R.id.tabFileName).text = file.name
         tabView.setOnClickListener { switchToTab(index) }
-
         tabView.findViewById<TextView>(R.id.tabClose).setOnClickListener {
             closeTab(index)
         }
-
         tabContainer.addView(tabView)
         updateTabHighlight()
     }
 
     private fun switchToTab(index: Int) {
         if (index < 0 || index >= openTabs.size) return
-
-        // Save current
         if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
             openTabs[currentTabIndex].writeText(codeEditor.getCode())
         }
-
         currentTabIndex = index
         val file = openTabs[index]
         codeEditor.setCode(file.readText())
@@ -198,7 +278,6 @@ class MainActivity : AppCompatActivity() {
         if (index < 0 || index >= openTabs.size) return
         openTabs.removeAt(index)
         tabContainer.removeViewAt(index)
-
         if (openTabs.isEmpty()) {
             currentTabIndex = -1
             fileName.text = "untitled.html"
@@ -288,11 +367,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPreview() {
-        floatingPreview?.show(codeEditor.getCode())
+        val baseUrl = if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+            "file://${openTabs[currentTabIndex].parent}/"
+        } else null
+        floatingPreview?.show(codeEditor.getCode(), baseUrl)
     }
 
     override fun onPause() {
         super.onPause()
+        saveSession()
         floatingPreview?.dismiss()
     }
 

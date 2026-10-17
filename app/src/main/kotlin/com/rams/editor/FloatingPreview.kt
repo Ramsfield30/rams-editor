@@ -22,24 +22,26 @@ class FloatingPreview(private val context: Context) {
     private var webView: WebView? = null
     private var isShowing = false
     private var isInteractive = false
+    private var currentBaseUrl: String? = null
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockRunnable: Runnable? = null
 
     private val params = WindowManager.LayoutParams(
-    420, 600,
-    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-    PixelFormat.TRANSLUCENT
-).apply {
-    gravity = Gravity.TOP or Gravity.START
-    x = 20
-    y = 80
-}
+        420, 600,
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+        PixelFormat.TRANSLUCENT
+    ).apply {
+        gravity = Gravity.TOP or Gravity.START
+        x = 20
+        y = 80
+    }
 
-    fun show(htmlContent: String) {
+    fun show(htmlContent: String, baseUrl: String? = null) {
+        currentBaseUrl = baseUrl
         if (isShowing) {
-            update(htmlContent)
+            update(htmlContent, baseUrl)
             return
         }
 
@@ -50,16 +52,17 @@ class FloatingPreview(private val context: Context) {
         webView?.apply {
             webViewClient = WebViewClient()
             settings.javaScriptEnabled = true
-            // Full size — scroll don't scale
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.textZoom = 100
+            settings.allowFileAccess = true
+            settings.allowFileAccessFromFileURLs = true
             clipToOutline = true
             loadDataWithBaseURL(
-                null,
+                currentBaseUrl,
                 injectViewport(htmlContent),
                 "text/html",
                 "UTF-8",
@@ -92,18 +95,17 @@ class FloatingPreview(private val context: Context) {
         isShowing = true
     }
 
-    fun update(htmlContent: String) {
-    val injected = injectViewport(htmlContent)
-    val escaped = injected
-        .replace("\\", "\\\\")
-        .replace("'", "\\'")
-        .replace("\n", "\\n")
-        .replace("\r", "")
-    webView?.evaluateJavascript(
-        "document.open('text/html');document.write('$escaped');document.close();",
-        null
-    )
-}
+    fun update(htmlContent: String, baseUrl: String? = null) {
+        if (baseUrl != null) currentBaseUrl = baseUrl
+        webView?.loadDataWithBaseURL(
+            currentBaseUrl,
+            injectViewport(htmlContent),
+            "text/html",
+            "UTF-8",
+            null
+        )
+    }
+
     private fun injectViewport(html: String): String {
         val viewport = """<meta name="viewport" content="width=device-width, initial-scale=1.0">"""
         return when {
@@ -127,11 +129,9 @@ class FloatingPreview(private val context: Context) {
         if (isInteractive == interactive) return
         isInteractive = interactive
         params.flags = if (interactive) {
-            // Allow forms and buttons to work
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         } else {
-            // Give keyboard back to editor
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         }
