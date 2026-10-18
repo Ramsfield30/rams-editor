@@ -43,6 +43,15 @@
             android:textSize="16sp"
             android:gravity="center"/>
 
+        <TextView
+            android:id="@+id/btnOpenProject"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:text="▤"
+            android:textColor="#BBBBBB"
+            android:textSize="16sp"
+            android:gravity="center"/>
+
     </LinearLayout>
 
     <!-- Project name -->
@@ -79,6 +88,7 @@
         android:id="@+id/fileTreeRecycler"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:nestedScrollingEnabled="true"/>
 
 </LinearLayout>

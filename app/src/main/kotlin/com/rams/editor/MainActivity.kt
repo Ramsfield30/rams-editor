@@ -57,6 +57,17 @@ class MainActivity : AppCompatActivity() {
 
         floatingPreview = FloatingPreview(this)
 
+        // Request storage permission for Android 8 and below
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    200
+                )
+            }
+        }
+
         // Setup file tree
         fileTreeAdapter = FileTreeAdapter(
             emptyList(),
@@ -66,14 +77,12 @@ class MainActivity : AppCompatActivity() {
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
             },
             onNewFileInFolder = { folder: File ->
-    ProjectManager.createNewFile(this, folder) { file ->
-        openFileInTab(file)
-        fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
-    }
-},
-            onNewFolderInFolder = { folder ->
-                createNewFolder(folder)
+                ProjectManager.createNewFile(this, folder) { file ->
+                    openFileInTab(file)
+                    fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+                }
             },
+            onNewFolderInFolder = { folder -> createNewFolder(folder) },
             onRename = { file -> renameFile(file) },
             onDelete = { file -> deleteFile(file) }
         )
@@ -89,7 +98,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // New file from drawer
+        // New file
         findViewById<TextView>(R.id.btnNewFile).setOnClickListener {
             ProjectManager.createNewFile(this) { file ->
                 openFileInTab(file)
@@ -98,30 +107,42 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // New project from drawer
+        // New project
         findViewById<TextView>(R.id.btnNewFolder).setOnClickListener {
-            ProjectManager.openProject(this) { name, nodes ->
+            ProjectManager.createNewProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
                 fileTreeAdapter.updateNodes(nodes)
+                openTabs.clear()
+                tabContainer.removeAllViews()
+                currentTabIndex = -1
+                fileName.text = "untitled.html"
+                codeEditor.setCode(getStarterCode())
                 drawerLayout.closeDrawer(Gravity.START)
             }
         }
 
-        btnSave.setOnClickListener {
-            saveCurrentFile()
+        // Open existing project
+        findViewById<TextView>(R.id.btnOpenProject).setOnClickListener {
+            ProjectManager.openProject(this) { name, nodes ->
+                projectName.text = name.uppercase()
+                fileTreeAdapter.updateNodes(nodes)
+                openTabs.clear()
+                tabContainer.removeAllViews()
+                currentTabIndex = -1
+                fileName.text = "untitled.html"
+                codeEditor.setCode(getStarterCode())
+                drawerLayout.closeDrawer(Gravity.START)
+            }
         }
 
-        btnRun.setOnClickListener {
-            checkOverlayPermission()
-        }
+        btnSave.setOnClickListener { saveCurrentFile() }
+        btnRun.setOnClickListener { checkOverlayPermission() }
 
         codeEditor.setOnTextChangedListener { code ->
             hasUnsavedChanges = true
             updateTitleWithDot()
             if (floatingPreview?.isVisible() == true) {
-                val baseUrl = if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-                    "file://${openTabs[currentTabIndex].parent}/"
-                } else null
+                val baseUrl = getBaseUrl()
                 floatingPreview?.update(code, baseUrl)
             }
             scheduleAutoSave(code)
@@ -129,10 +150,15 @@ class MainActivity : AppCompatActivity() {
 
         codeEditor.setCode(getStarterCode())
 
-        // Restore last session silently
         Handler(Looper.getMainLooper()).postDelayed({
             restoreLastSession()
         }, 300)
+    }
+
+    private fun getBaseUrl(): String? {
+        return if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
+            "file://${openTabs[currentTabIndex].parent}/"
+        } else null
     }
 
     private fun restoreLastSession() {
@@ -148,9 +174,7 @@ class MainActivity : AppCompatActivity() {
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
                 if (lastFilePath != null) {
                     val lastFile = File(lastFilePath)
-                    if (lastFile.exists()) {
-                        openFileInTab(lastFile)
-                    }
+                    if (lastFile.exists()) openFileInTab(lastFile)
                 }
             }
         }
@@ -202,7 +226,6 @@ class MainActivity : AppCompatActivity() {
                 if (newName.isNotEmpty()) {
                     val newFile = File(file.parent, newName)
                     file.renameTo(newFile)
-                    // Update open tabs
                     val tabIndex = openTabs.indexOf(file)
                     if (tabIndex != -1) {
                         openTabs[tabIndex] = newFile
@@ -367,10 +390,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPreview() {
-        val baseUrl = if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            "file://${openTabs[currentTabIndex].parent}/"
-        } else null
-        floatingPreview?.show(codeEditor.getCode(), baseUrl)
+        floatingPreview?.show(codeEditor.getCode(), getBaseUrl())
     }
 
     override fun onPause() {
