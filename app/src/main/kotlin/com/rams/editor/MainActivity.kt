@@ -142,8 +142,7 @@ class MainActivity : AppCompatActivity() {
             hasUnsavedChanges = true
             updateTitleWithDot()
             if (floatingPreview?.isVisible() == true) {
-                val baseUrl = getBaseUrl()
-                floatingPreview?.update(code, baseUrl)
+                floatingPreview?.update(getPreviewContent(), getBaseUrl())
             }
             scheduleAutoSave(code)
         }
@@ -159,6 +158,36 @@ class MainActivity : AppCompatActivity() {
         return if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
             "file://${openTabs[currentTabIndex].parent}/"
         } else null
+    }
+
+    private fun getPreviewContent(): String {
+        val currentFile = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+            openTabs[currentTabIndex] else null
+
+        // If editing CSS — find and show linked HTML instead
+        if (currentFile != null && currentFile.name.endsWith(".css")) {
+            val projectDir = currentFile.parentFile
+            val htmlFile = projectDir?.listFiles()
+                ?.firstOrNull { it.name.endsWith(".html") }
+            if (htmlFile != null) {
+                // Save current CSS first so preview picks it up
+                currentFile.writeText(codeEditor.getCode())
+                return htmlFile.readText()
+            }
+        }
+
+        // If editing JS — also show linked HTML
+        if (currentFile != null && currentFile.name.endsWith(".js")) {
+            val projectDir = currentFile.parentFile
+            val htmlFile = projectDir?.listFiles()
+                ?.firstOrNull { it.name.endsWith(".html") }
+            if (htmlFile != null) {
+                currentFile.writeText(codeEditor.getCode())
+                return htmlFile.readText()
+            }
+        }
+
+        return codeEditor.getCode()
     }
 
     private fun restoreLastSession() {
@@ -390,7 +419,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPreview() {
-        floatingPreview?.show(codeEditor.getCode(), getBaseUrl())
+        floatingPreview?.show(getPreviewContent(), getBaseUrl())
     }
 
     override fun onPause() {
