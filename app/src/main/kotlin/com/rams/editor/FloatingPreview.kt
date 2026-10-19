@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.TextView
@@ -60,6 +61,7 @@ class FloatingPreview(private val context: Context) {
             settings.textZoom = 100
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
             clipToOutline = true
             loadDataWithBaseURL(
                 currentBaseUrl,
@@ -74,9 +76,7 @@ class FloatingPreview(private val context: Context) {
         btnClose?.setOnClickListener { dismiss() }
 
         val btnFullscreen = floatingView?.findViewById<TextView>(R.id.btnFullscreen)
-        btnFullscreen?.setOnClickListener {
-            // fullscreen in v2
-        }
+        btnFullscreen?.setOnClickListener { }
 
         val timeView = floatingView?.findViewById<TextView>(R.id.previewTime)
         clockRunnable = object : Runnable {
@@ -102,6 +102,49 @@ class FloatingPreview(private val context: Context) {
             injectViewport(htmlContent),
             "text/html",
             "UTF-8",
+            null
+        )
+    }
+
+    fun updateCss(cssContent: String) {
+        val escaped = cssContent
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "")
+        webView?.evaluateJavascript(
+            """
+            var style = document.getElementById('rams-live-css');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'rams-live-css';
+                document.head.appendChild(style);
+            }
+            style.textContent = '$escaped';
+            """.trimIndent(),
+            null
+        )
+    }
+
+    fun updateJs(jsContent: String) {
+        val escaped = jsContent
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "")
+        webView?.evaluateJavascript(
+            """
+            try {
+                var script = document.getElementById('rams-live-js');
+                if (script) script.remove();
+                script = document.createElement('script');
+                script.id = 'rams-live-js';
+                script.textContent = '$escaped';
+                document.body.appendChild(script);
+            } catch(e) {
+                console.error(e);
+            }
+            """.trimIndent(),
             null
         )
     }
@@ -135,9 +178,7 @@ class FloatingPreview(private val context: Context) {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         }
-        if (isShowing) {
-            windowManager.updateViewLayout(floatingView, params)
-        }
+        if (isShowing) windowManager.updateViewLayout(floatingView, params)
     }
 
     private fun setupTouch() {
@@ -169,9 +210,7 @@ class FloatingPreview(private val context: Context) {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
-                        setInteractive(!isInteractive)
-                    }
+                    if (!isDragging) setInteractive(!isInteractive)
                     true
                 }
                 MotionEvent.ACTION_OUTSIDE -> {

@@ -4,10 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
+    android:gravity="center_horizontal"
     android:background="#0D0D0D">
 
-    <!-- Logo -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
     <TextView
         android:id="@+id/splashLogo"
         android:layout_width="wrap_content"
@@ -17,9 +21,12 @@
         android:textSize="72sp"
         android:textStyle="bold"
         android:fontFamily="monospace"
+        android:shadowColor="#00BFFF"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="20"
         android:layout_marginBottom="16dp"/>
 
-    <!-- App name -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -29,7 +36,6 @@
         android:letterSpacing="0.1"
         android:layout_marginBottom="8dp"/>
 
-    <!-- Tagline -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -38,7 +44,11 @@
         android:textSize="13sp"
         android:letterSpacing="0.05"/>
 
-    <!-- Version -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
     <TextView
         android:id="@+id/splashVersion"
         android:layout_width="wrap_content"
@@ -46,6 +56,6 @@
         android:text="v1.0"
         android:textColor="#333333"
         android:textSize="11sp"
-        android:layout_marginTop="48dp"/>
+        android:layout_marginBottom="24dp"/>
 
 </LinearLayout>

@@ -41,6 +41,9 @@ class MainActivity : AppCompatActivity() {
     private var currentTabIndex = -1
     private lateinit var fileTreeAdapter: FileTreeAdapter
 
+    // Track last active HTML file for CSS/JS preview
+    private var lastActiveHtmlFile: File? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -57,7 +60,6 @@ class MainActivity : AppCompatActivity() {
 
         floatingPreview = FloatingPreview(this)
 
-        // Request storage permission for Android 8 and below
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -68,7 +70,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Setup file tree
         fileTreeAdapter = FileTreeAdapter(
             emptyList(),
             onFileClick = { file -> openFileInTab(file) },
@@ -89,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         fileTreeRecycler.layoutManager = LinearLayoutManager(this)
         fileTreeRecycler.adapter = fileTreeAdapter
 
-        // Hamburger menu
         btnMenu.setOnClickListener {
             if (drawerLayout.isDrawerOpen(Gravity.START)) {
                 drawerLayout.closeDrawer(Gravity.START)
@@ -98,7 +98,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // New file
         findViewById<TextView>(R.id.btnNewFile).setOnClickListener {
             ProjectManager.createNewFile(this) { file ->
                 openFileInTab(file)
@@ -107,7 +106,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // New project
         findViewById<TextView>(R.id.btnNewFolder).setOnClickListener {
             ProjectManager.createNewProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
@@ -115,13 +113,13 @@ class MainActivity : AppCompatActivity() {
                 openTabs.clear()
                 tabContainer.removeAllViews()
                 currentTabIndex = -1
+                lastActiveHtmlFile = null
                 fileName.text = "untitled.html"
                 codeEditor.setCode(getStarterCode())
                 drawerLayout.closeDrawer(Gravity.START)
             }
         }
 
-        // Open existing project
         findViewById<TextView>(R.id.btnOpenProject).setOnClickListener {
             ProjectManager.openProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
@@ -129,6 +127,7 @@ class MainActivity : AppCompatActivity() {
                 openTabs.clear()
                 tabContainer.removeAllViews()
                 currentTabIndex = -1
+                lastActiveHtmlFile = null
                 fileName.text = "untitled.html"
                 codeEditor.setCode(getStarterCode())
                 drawerLayout.closeDrawer(Gravity.START)
@@ -142,7 +141,7 @@ class MainActivity : AppCompatActivity() {
             hasUnsavedChanges = true
             updateTitleWithDot()
             if (floatingPreview?.isVisible() == true) {
-                floatingPreview?.update(getPreviewContent(), getBaseUrl())
+                updatePreview(code)
             }
             scheduleAutoSave(code)
         }
@@ -154,35 +153,46 @@ class MainActivity : AppCompatActivity() {
         }, 300)
     }
 
+    private fun updatePreview(code: String) {
+        val currentFile = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+            openTabs[currentTabIndex] else null
+
+        when {
+            currentFile?.name?.endsWith(".css") == true -> {
+                // Inject CSS directly — instant, no reload
+                floatingPreview?.updateCss(code)
+            }
+            currentFile?.name?.endsWith(".js") == true -> {
+                // Inject JS directly
+                floatingPreview?.updateJs(code)
+            }
+            else -> {
+                // HTML — full update
+                floatingPreview?.update(code, getBaseUrl())
+            }
+        }
+    }
+
     private fun getBaseUrl(): String? {
-        return if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            "file://${openTabs[currentTabIndex].parent}/"
-        } else null
+        // Use last active HTML file's directory as base
+        val baseFile = lastActiveHtmlFile
+            ?: if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+                openTabs[currentTabIndex] else null
+        return baseFile?.parent?.let { "file://$it/" }
     }
 
     private fun getPreviewContent(): String {
         val currentFile = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
             openTabs[currentTabIndex] else null
 
-        // If editing CSS — find and show linked HTML instead
-        if (currentFile != null && currentFile.name.endsWith(".css")) {
-            val projectDir = currentFile.parentFile
-            val htmlFile = projectDir?.listFiles()
-                ?.firstOrNull { it.name.endsWith(".html") }
-            if (htmlFile != null) {
-                // Save current CSS first so preview picks it up
-                currentFile.writeText(codeEditor.getCode())
-                return htmlFile.readText()
-            }
-        }
-
-        // If editing JS — also show linked HTML
-        if (currentFile != null && currentFile.name.endsWith(".js")) {
-            val projectDir = currentFile.parentFile
-            val htmlFile = projectDir?.listFiles()
-                ?.firstOrNull { it.name.endsWith(".html") }
-            if (htmlFile != null) {
-                currentFile.writeText(codeEditor.getCode())
+        // For CSS or JS — show the last active HTML file
+        if (currentFile != null &&
+            (currentFile.name.endsWith(".css") || currentFile.name.endsWith(".js"))
+        ) {
+            val htmlFile = lastActiveHtmlFile
+                ?: currentFile.parentFile?.listFiles()
+                    ?.firstOrNull { it.name.endsWith(".html") }
+            if (htmlFile != null && htmlFile.exists()) {
                 return htmlFile.readText()
             }
         }
@@ -262,6 +272,7 @@ class MainActivity : AppCompatActivity() {
                             ?.findViewById<TextView>(R.id.tabFileName)
                             ?.text = newName
                     }
+                    if (lastActiveHtmlFile == file) lastActiveHtmlFile = newFile
                     fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
                 }
             }
@@ -277,6 +288,7 @@ class MainActivity : AppCompatActivity() {
                 file.deleteRecursively()
                 val tabIndex = openTabs.indexOf(file)
                 if (tabIndex != -1) closeTab(tabIndex)
+                if (lastActiveHtmlFile == file) lastActiveHtmlFile = null
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
             }
             .setNegativeButton("Cancel", null)
@@ -297,6 +309,12 @@ class MainActivity : AppCompatActivity() {
         addTabView(file, currentTabIndex)
         codeEditor.setCode(file.readText())
         fileName.text = file.name
+
+        // Track last active HTML file
+        if (file.name.endsWith(".html")) {
+            lastActiveHtmlFile = file
+        }
+
         hasUnsavedChanges = false
         drawerLayout.closeDrawer(Gravity.START)
     }
@@ -322,8 +340,19 @@ class MainActivity : AppCompatActivity() {
         val file = openTabs[index]
         codeEditor.setCode(file.readText())
         fileName.text = file.name
+
+        // Track last active HTML file
+        if (file.name.endsWith(".html")) {
+            lastActiveHtmlFile = file
+        }
+
         hasUnsavedChanges = false
         updateTabHighlight()
+
+        // Update preview when switching tabs
+        if (floatingPreview?.isVisible() == true) {
+            floatingPreview?.show(getPreviewContent(), getBaseUrl())
+        }
     }
 
     private fun closeTab(index: Int) {
