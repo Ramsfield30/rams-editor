@@ -22,7 +22,6 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Hamburger menu -->
             <TextView
                 android:id="@+id/btnMenu"
                 android:layout_width="48dp"
@@ -32,7 +31,6 @@
                 android:textSize="20sp"
                 android:gravity="center"/>
 
-            <!-- File name -->
             <TextView
                 android:id="@+id/fileName"
                 android:layout_width="0dp"
@@ -42,9 +40,10 @@
                 android:textColor="#CCCCCC"
                 android:textSize="13sp"
                 android:gravity="center_vertical"
-                android:paddingStart="4dp"/>
+                android:paddingStart="4dp"
+                android:singleLine="true"
+                android:ellipsize="end"/>
 
-            <!-- Save button -->
             <Button
                 android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
@@ -54,7 +53,6 @@
                 android:backgroundTint="#4CAF50"
                 android:textColor="#FFFFFF"/>
 
-            <!-- Run button -->
             <Button
                 android:id="@+id/btnRun"
                 android:layout_width="48dp"
@@ -66,7 +64,7 @@
 
         </LinearLayout>
 
-        <!-- Tabs -->
+        <!-- File tabs -->
         <HorizontalScrollView
             android:id="@+id/tabScrollView"
             android:layout_width="match_parent"
@@ -102,6 +100,42 @@
                 android:gravity="top"/>
 
         </ScrollView>
+
+        <!-- Snippet row 1 — context aware -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="#252525"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/snippetRow1"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"/>
+
+        </HorizontalScrollView>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"/>
+
+        <!-- Snippet row 2 — fixed symbols -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:background="#1E1E1E"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/snippetRow2"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"/>
+
+        </HorizontalScrollView>
 
     </LinearLayout>
 

@@ -31,6 +31,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainer: LinearLayout
     private lateinit var fileTreeRecycler: RecyclerView
     private lateinit var projectName: TextView
+    
+    // Added exactly as requested
+    private lateinit var snippetRow1: LinearLayout
+    private lateinit var snippetRow2: LinearLayout
+    private lateinit var snippetBar: SnippetBar
 
     private var floatingPreview: FloatingPreview? = null
     private val autoSaveHandler = Handler(Looper.getMainLooper())
@@ -59,6 +64,22 @@ class MainActivity : AppCompatActivity() {
         projectName = findViewById(R.id.projectName)
 
         floatingPreview = FloatingPreview(this)
+
+        // Added exactly as requested
+        // Setup snippet bar
+        snippetRow1 = findViewById(R.id.snippetRow1)
+        snippetRow2 = findViewById(R.id.snippetRow2)
+        snippetBar = SnippetBar(
+            this,
+            snippetRow1,
+            snippetRow2
+        ) { code, cursorOffset ->
+            val start = codeEditor.selectionStart.coerceAtLeast(0)
+            codeEditor.text?.insert(start, code)
+            codeEditor.setSelection((start + cursorOffset).coerceAtMost(
+                codeEditor.text?.length ?: 0
+            ))
+        }
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -309,6 +330,11 @@ class MainActivity : AppCompatActivity() {
         addTabView(file, currentTabIndex)
         codeEditor.setCode(file.readText())
         fileName.text = file.name
+        
+        // Added exactly as requested
+        // Update snippet bar mode based on file type
+        val ext = file.extension.lowercase()
+        snippetBar.setMode(ext)
 
         // Track last active HTML file
         if (file.name.endsWith(".html")) {
@@ -340,6 +366,10 @@ class MainActivity : AppCompatActivity() {
         val file = openTabs[index]
         codeEditor.setCode(file.readText())
         fileName.text = file.name
+        
+        // Added exactly as requested
+        val ext = openTabs[index].extension.lowercase()
+        snippetBar.setMode(ext)
 
         // Track last active HTML file
         if (file.name.endsWith(".html")) {

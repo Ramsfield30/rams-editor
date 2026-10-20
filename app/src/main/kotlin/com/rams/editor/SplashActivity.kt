@@ -19,7 +19,7 @@ class SplashActivity : AppCompatActivity() {
         // Hide action bar
         supportActionBar?.hide()
 
-        val logo = findViewById<TextView>(R.id.splashLogo)
+        val logo = findViewById<android.widget.ImageView>(R.id.splashLogo)
 
         // Fade in + slight scale animation
         val fadeIn = AlphaAnimation(0f, 1f).apply {
