@@ -222,35 +222,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun restoreLastSession() {
-        val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
-        val lastProjectPath = prefs.getString("last_project", null)
-        val lastFilePath = prefs.getString("last_file", null)
+    val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+    val lastProjectPath = prefs.getString("last_project", null)
+    val tabPaths = prefs.getString("open_tabs", null)
+    val activeTab = prefs.getInt("active_tab", 0)
 
-        if (lastProjectPath != null) {
-            val projectDir = File(lastProjectPath)
-            if (projectDir.exists()) {
-                ProjectManager.setCurrentProject(projectDir)
-                projectName.text = projectDir.name.uppercase()
-                fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
-                if (lastFilePath != null) {
-                    val lastFile = File(lastFilePath)
-                    if (lastFile.exists()) openFileInTab(lastFile)
+    if (lastProjectPath != null) {
+        val projectDir = File(lastProjectPath)
+        if (projectDir.exists()) {
+            ProjectManager.setCurrentProject(projectDir)
+            projectName.text = projectDir.name.uppercase()
+            fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+
+            // Restore all tabs
+            if (tabPaths != null) {
+                tabPaths.split("|").forEach { path ->
+                    val file = File(path)
+                    if (file.exists()) openFileInTab(file)
+                }
+                // Switch to last active tab
+                if (activeTab >= 0 && activeTab < openTabs.size) {
+                    switchToTab(activeTab)
                 }
             }
         }
     }
+}
 
     private fun saveSession() {
-        val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
-        val editor = prefs.edit()
-        ProjectManager.getCurrentProject()?.let {
-            editor.putString("last_project", it.absolutePath)
-        }
-        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            editor.putString("last_file", openTabs[currentTabIndex].absolutePath)
-        }
-        editor.apply()
+    val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+    val editor = prefs.edit()
+    ProjectManager.getCurrentProject()?.let {
+        editor.putString("last_project", it.absolutePath)
     }
+    // Save all open tab paths
+    val tabPaths = openTabs.joinToString("|") { it.absolutePath }
+    editor.putString("open_tabs", tabPaths)
+    editor.putInt("active_tab", currentTabIndex)
+    editor.apply()
+}
 
     private fun createNewFolder(parentDir: File) {
         val input = android.widget.EditText(this)
