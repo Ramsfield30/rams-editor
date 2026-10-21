@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1E1E1E">
+
+    <!-- Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="#2D2D2D"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:text="←"
+            android:textColor="#CCCCCC"
+            android:textSize="20sp"
+            android:gravity="center"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Settings"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"/>
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- EDITOR SECTION -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="EDITOR"
+                android:textColor="#2196F3"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:paddingBottom="8dp"/>
+
+            <!-- Font Size -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Font Size"
+                        android:textColor="#CCCCCC"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/fontSizeValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="14px"
+                        android:textColor="#888888"
+                        android:textSize="13sp"/>
+
+                </LinearLayout>
+
+                <SeekBar
+                    android:id="@+id/fontSizeSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:min="10"
+                    android:max="24"
+                    android:progress="14"
+                    android:progressTint="#2196F3"
+                    android:thumbTint="#2196F3"
+                    android:layout_marginTop="4dp"/>
+
+            </LinearLayout>
+
+            <!-- Tab Size -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Tab Size"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:orientation="horizontal"
+                    android:background="#2D2D2D">
+
+                    <TextView
+                        android:id="@+id/tabSize2"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:text="2"
+                        android:gravity="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:background="#2196F3"/>
+
+                    <TextView
+                        android:id="@+id/tabSize4"
+                        android:layout_width="48dp"
+                        android:layout_height="match_parent"
+                        android:text="4"
+                        android:gravity="center"
+                        android:textColor="#888888"
+                        android:textSize="13sp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Word Wrap -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Word Wrap"
+                        android:textColor="#CCCCCC"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Wrap long lines"
+                        android:textColor="#555555"
+                        android:textSize="11sp"/>
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/wordWrapSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    android:thumbTint="#2196F3"
+                    android:trackTint="#333333"/>
+
+            </LinearLayout>
+
+            <!-- Line Numbers -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Line Numbers"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <Switch
+                    android:id="@+id/lineNumbersSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:thumbTint="#2196F3"
+                    android:trackTint="#333333"/>
+
+            </LinearLayout>
+
+            <!-- Auto Save -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto Save"
+                        android:textColor="#CCCCCC"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Save after 2 seconds of inactivity"
+                        android:textColor="#555555"
+                        android:textSize="11sp"/>
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/autoSaveSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:thumbTint="#2196F3"
+                    android:trackTint="#333333"/>
+
+            </LinearLayout>
+
+            <!-- Auto Close Tags -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Auto Close Tags"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <Switch
+                    android:id="@+id/autoCloseSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:thumbTint="#2196F3"
+                    android:trackTint="#333333"/>
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#2D2D2D"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- APPEARANCE SECTION -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="APPEARANCE"
+                android:textColor="#2196F3"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:paddingBottom="8dp"/>
+
+            <!-- Theme -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Theme"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:orientation="horizontal"
+                    android:background="#2D2D2D">
+
+                    <TextView
+                        android:id="@+id/themeDark"
+                        android:layout_width="64dp"
+                        android:layout_height="match_parent"
+                        android:text="Dark"
+                        android:gravity="center"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:background="#2196F3"/>
+
+                    <TextView
+                        android:id="@+id/themeLight"
+                        android:layout_width="64dp"
+                        android:layout_height="match_parent"
+                        android:text="Light"
+                        android:gravity="center"
+                        android:textColor="#888888"
+                        android:textSize="13sp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#2D2D2D"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- PREVIEW SECTION -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="PREVIEW"
+                android:textColor="#2196F3"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:paddingBottom="8dp"/>
+
+            <!-- Preview Window Size -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Preview Size"
+                        android:textColor="#CCCCCC"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/previewSizeValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="50%"
+                        android:textColor="#888888"
+                        android:textSize="13sp"/>
+
+                </LinearLayout>
+
+                <SeekBar
+                    android:id="@+id/previewSizeSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:min="25"
+                    android:max="75"
+                    android:progress="50"
+                    android:progressTint="#2196F3"
+                    android:thumbTint="#2196F3"
+                    android:layout_marginTop="4dp"/>
+
+            </LinearLayout>
+
+            <!-- Snippet Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Show Snippet Bar"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <Switch
+                    android:id="@+id/snippetBarSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:thumbTint="#2196F3"
+                    android:trackTint="#333333"/>
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#2D2D2D"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- GIT SECTION -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="GIT"
+                android:textColor="#2196F3"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:paddingBottom="8dp"/>
+
+            <android.widget.EditText
+                android:id="@+id/gitUsername"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Username"
+                android:textColorHint="#555555"
+                android:textColor="#CCCCCC"
+                android:background="#2D2D2D"
+                android:paddingStart="12dp"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"/>
+
+            <android.widget.EditText
+                android:id="@+id/gitEmail"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Email"
+                android:textColorHint="#555555"
+                android:textColor="#CCCCCC"
+                android:background="#2D2D2D"
+                android:paddingStart="12dp"
+                android:textSize="14sp"
+                android:inputType="textEmailAddress"
+                android:layout_marginBottom="8dp"/>
+
+            <android.widget.EditText
+                android:id="@+id/gitToken"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Personal Access Token"
+                android:textColorHint="#555555"
+                android:textColor="#CCCCCC"
+                android:background="#2D2D2D"
+                android:paddingStart="12dp"
+                android:textSize="14sp"
+                android:inputType="textPassword"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#2D2D2D"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- ABOUT SECTION -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ABOUT"
+                android:textColor="#2196F3"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:paddingBottom="8dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Version 1.0"
+                android:textColor="#CCCCCC"
+                android:textSize="14sp"
+                android:gravity="center_vertical"/>
+
+            <TextView
+                android:id="@+id/btnGithub"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="GitHub — Ramsfield30/rams-editor"
+                android:textColor="#2196F3"
+                android:textSize="14sp"
+                android:gravity="center_vertical"/>
+
+            <TextView
+                android:id="@+id/btnShare"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Share App"
+                android:textColor="#CCCCCC"
+                android:textSize="14sp"
+                android:gravity="center_vertical"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

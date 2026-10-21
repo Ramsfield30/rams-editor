@@ -62,6 +62,15 @@
                 android:backgroundTint="#2196F3"
                 android:textColor="#FFFFFF"/>
 
+            <TextView
+                android:id="@+id/btnSettings"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:text="⚙"
+                android:textColor="#CCCCCC"
+                android:textSize="18sp"
+                android:gravity="center"/>
+
         </LinearLayout>
 
         <!-- File tabs -->

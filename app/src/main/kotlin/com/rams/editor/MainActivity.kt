@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var snippetRow1: LinearLayout
     private lateinit var snippetRow2: LinearLayout
     private lateinit var snippetBar: SnippetBar
+    private lateinit var btnSettings: TextView
 
     private var floatingPreview: FloatingPreview? = null
     private val autoSaveHandler = Handler(Looper.getMainLooper())
@@ -62,6 +63,9 @@ class MainActivity : AppCompatActivity() {
         tabContainer = findViewById(R.id.tabContainer)
         fileTreeRecycler = findViewById(R.id.fileTreeRecycler)
         projectName = findViewById(R.id.projectName)
+        
+        // Added exactly as requested
+        btnSettings = findViewById(R.id.btnSettings)
 
         floatingPreview = FloatingPreview(this)
 
@@ -157,6 +161,11 @@ class MainActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener { saveCurrentFile() }
         btnRun.setOnClickListener { checkOverlayPermission() }
+        
+        // Added exactly as requested
+        btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         codeEditor.setOnTextChangedListener { code ->
             hasUnsavedChanges = true
