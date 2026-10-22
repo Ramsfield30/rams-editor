@@ -222,6 +222,15 @@ class FloatingPreview(private val context: Context) {
         }
     }
 
+    // NEW: preview window size from the settings slider (25-75% of screen width)
+    fun setSizePercent(percent: Int) {
+        val screenWidth = context.resources.displayMetrics.widthPixels
+        val w = screenWidth * percent / 100
+        params.width = w
+        params.height = (w * 600f / 420f).toInt()
+        if (isShowing) windowManager.updateViewLayout(floatingView, params)
+    }
+
     fun dismiss() {
         if (isShowing && floatingView != null) {
             clockRunnable?.let { clockHandler.removeCallbacks(it) }

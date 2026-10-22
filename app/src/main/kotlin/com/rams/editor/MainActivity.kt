@@ -10,6 +10,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -498,6 +499,29 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPreview() {
         floatingPreview?.show(getPreviewContent(), getBaseUrl())
+    }
+
+    // Added exactly as requested
+    private fun applySettings() {
+        val prefs = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
+
+        codeEditor.setFontSizeSp(prefs.getInt("font_size", 14))
+        codeEditor.setWordWrap(prefs.getBoolean("word_wrap", false))
+        codeEditor.showLineNumbers = prefs.getBoolean("line_numbers", true)
+        codeEditor.autoCloseEnabled = prefs.getBoolean("auto_close", true)
+
+        snippetBar.tabSize = prefs.getInt("tab_size", 4)
+        val snippetVisibility =
+            if (prefs.getBoolean("snippet_bar", true)) View.VISIBLE else View.GONE
+        (snippetRow1.parent as View).visibility = snippetVisibility
+        (snippetRow2.parent as View).visibility = snippetVisibility
+
+        floatingPreview?.setSizePercent(prefs.getInt("preview_size", 50))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applySettings()
     }
 
     override fun onPause() {

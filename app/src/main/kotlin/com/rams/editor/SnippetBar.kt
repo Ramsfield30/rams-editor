@@ -12,6 +12,8 @@ class SnippetBar(
     private val onInsert: (String, Int) -> Unit
 ) {
 
+    var tabSize = 4
+
     // Fixed symbols — always shown in row 2
     private val fixedSnippets = listOf(
         "<" to "<",
@@ -105,9 +107,8 @@ class SnippetBar(
                 android.graphics.Color.TRANSPARENT
             )
             setOnClickListener {
-                // Calculate cursor offset for smart positioning
-                val cursorOffset = getCursorOffset(code)
-                onInsert(code, cursorOffset)
+                val finalCode = if (label == "→|") " ".repeat(tabSize) else code
+                onInsert(finalCode, getCursorOffset(finalCode))
             }
         }
 
