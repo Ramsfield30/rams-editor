@@ -44,6 +44,15 @@
                 android:singleLine="true"
                 android:ellipsize="end"/>
 
+            <TextView
+                android:id="@+id/btnConsole"
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:text=">_"
+                android:textColor="#CCCCCC"
+                android:textSize="16sp"
+                android:gravity="center"/>
+
             <Button
                 android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
@@ -119,6 +128,65 @@
                 android:gravity="top"/>
 
         </ScrollView>
+
+        <!-- Console panel -->
+        <LinearLayout
+            android:id="@+id/consolePanel"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:orientation="vertical"
+            android:background="#1E1E1E"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#252526">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingStart="12dp"
+                    android:text="CONSOLE"
+                    android:textColor="#CCCCCC"
+                    android:textSize="12sp"/>
+
+                <TextView
+                    android:id="@+id/consoleClear"
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:text="🗑"
+                    android:textColor="#CCCCCC"
+                    android:gravity="center"/>
+
+                <TextView
+                    android:id="@+id/consoleClose"
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:text="✕"
+                    android:textColor="#CCCCCC"
+                    android:gravity="center"/>
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/consoleScroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <TextView
+                    android:id="@+id/consoleText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="8dp"
+                    android:fontFamily="monospace"
+                    android:textColor="#D4D4D4"
+                    android:textSize="12sp"/>
+            </ScrollView>
+        </LinearLayout>
 
         <!-- Snippet row 1 — context aware -->
         <HorizontalScrollView

@@ -41,6 +41,7 @@ class FloatingPreview(private val context: Context) {
     }
 
     fun show(htmlContent: String, baseUrl: String? = null) {
+        ConsoleLog.clear()
         currentBaseUrl = baseUrl
         if (isShowing) {
             update(htmlContent, baseUrl)
@@ -59,6 +60,7 @@ class FloatingPreview(private val context: Context) {
             
         webView?.apply {
             webViewClient = WebViewClient()
+            webChromeClient = ConsoleLog.chromeClient()
             settings.javaScriptEnabled = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
@@ -103,6 +105,7 @@ class FloatingPreview(private val context: Context) {
     }
 
     fun update(htmlContent: String, baseUrl: String? = null) {
+        ConsoleLog.clear()
         if (baseUrl != null) currentBaseUrl = baseUrl
         webView?.loadDataWithBaseURL(
             currentBaseUrl,

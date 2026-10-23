@@ -27,6 +27,7 @@ class FullScreenPreviewActivity : AppCompatActivity() {
 
         webView = WebView(this).apply {
             webViewClient = WebViewClient()
+            webChromeClient = ConsoleLog.chromeClient()
             settings.javaScriptEnabled = true
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true

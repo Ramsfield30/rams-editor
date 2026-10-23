@@ -8,9 +8,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.text.style.ForegroundColorSpan
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.webkit.ConsoleMessage
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -69,6 +71,8 @@ class MainActivity : AppCompatActivity() {
         btnSettings = findViewById(R.id.btnSettings)
 
         floatingPreview = FloatingPreview(this)
+        
+        setupConsole()
 
         // Added exactly as requested
         // Setup snippet bar
@@ -513,6 +517,43 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100) showPreview()
     }
 
+    private fun setupConsole() {
+        val panel = findViewById<android.widget.LinearLayout>(R.id.consolePanel)
+        val text = findViewById<TextView>(R.id.consoleText)
+        val scroll = findViewById<android.widget.ScrollView>(R.id.consoleScroll)
+
+        fun render() {
+            val sb = android.text.SpannableStringBuilder()
+            for (e in ConsoleLog.entries) {
+                val (prefix, color) = when (e.level) {
+                    ConsoleMessage.MessageLevel.ERROR -> "✖ " to 0xFFF48771.toInt()
+                    ConsoleMessage.MessageLevel.WARNING -> "⚠ " to 0xFFCCA700.toInt()
+                    else -> "" to 0xFFD4D4D4.toInt()
+                }
+                val start = sb.length
+                sb.append(prefix).append(e.text).append("\n")
+                sb.setSpan(ForegroundColorSpan(color), start, sb.length, 0)
+            }
+            text.text = sb
+            scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+        }
+
+        ConsoleLog.onChange = { runOnUiThread { render() } }
+
+        findViewById<TextView>(R.id.btnConsole).setOnClickListener {
+            if (panel.visibility == View.VISIBLE) {
+                panel.visibility = View.GONE
+            } else {
+                panel.visibility = View.VISIBLE
+                render()
+            }
+        }
+        findViewById<TextView>(R.id.consoleClear).setOnClickListener { ConsoleLog.clear() }
+        findViewById<TextView>(R.id.consoleClose).setOnClickListener {
+            panel.visibility = View.GONE
+        }
+    }
+
     private fun runPreview() {
         val action = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
             .getString("run_action", "fullscreen")
@@ -527,6 +568,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFullScreenPreview() {
+        ConsoleLog.clear()
         PreviewHolder.html = getPreviewContent()
         PreviewHolder.baseUrl = getBaseUrl()
         startActivity(Intent(this, FullScreenPreviewActivity::class.java))
@@ -566,6 +608,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        ConsoleLog.onChange = null
         autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
         floatingPreview?.dismiss()
         super.onDestroy()
