@@ -63,6 +63,16 @@
                 android:textColor="#FFFFFF"/>
 
             <TextView
+                android:id="@+id/btnRunMenu"
+                android:layout_width="28dp"
+                android:layout_height="36dp"
+                android:text="▾"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:background="#1976D2"
+                android:gravity="center"/>
+
+            <TextView
                 android:id="@+id/btnSettings"
                 android:layout_width="48dp"
                 android:layout_height="match_parent"

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
@@ -24,20 +25,25 @@ class SettingsActivity : AppCompatActivity() {
             finish()
         }
 
-        // Font size
+        // Font size (10-24)
         val fontSizeSlider = findViewById<SeekBar>(R.id.fontSizeSlider)
         val fontSizeValue = findViewById<TextView>(R.id.fontSizeValue)
-        val savedFontSize = prefs.getInt("font_size", 14)
-        fontSizeSlider.progress = savedFontSize
+        val fontMin = 10
+        fontSizeSlider.max = 24 - fontMin
+        val savedFontSize = prefs.getInt("font_size", 14).coerceIn(fontMin, 24)
+        fontSizeSlider.progress = savedFontSize - fontMin
         fontSizeValue.text = "${savedFontSize}px"
         fontSizeSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                fontSizeValue.text = "${progress}px"
-                prefs.edit().putInt("font_size", progress).apply()
+                val size = progress + fontMin
+                fontSizeValue.text = "${size}px"
+                prefs.edit().putInt("font_size", size).apply()
             }
             override fun onStartTrackingTouch(sb: SeekBar?) {}
             override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
+        findViewById<TextView>(R.id.fontSizeMinus).setOnClickListener { fontSizeSlider.progress -= 1 }
+        findViewById<TextView>(R.id.fontSizePlus).setOnClickListener { fontSizeSlider.progress += 1 }
 
         // Tab size
         val tabSize2 = findViewById<TextView>(R.id.tabSize2)
@@ -95,20 +101,58 @@ class SettingsActivity : AppCompatActivity() {
             updateThemeUI(themeDark, themeLight, "light")
         }
 
-        // Preview size
+        // Preview size (25-75%)
         val previewSizeSlider = findViewById<SeekBar>(R.id.previewSizeSlider)
         val previewSizeValue = findViewById<TextView>(R.id.previewSizeValue)
-        val savedPreviewSize = prefs.getInt("preview_size", 50)
-        previewSizeSlider.progress = savedPreviewSize
+        val previewMin = 25
+        previewSizeSlider.max = 75 - previewMin
+        val savedPreviewSize = prefs.getInt("preview_size", 50).coerceIn(previewMin, 75)
+        previewSizeSlider.progress = savedPreviewSize - previewMin
         previewSizeValue.text = "${savedPreviewSize}%"
+        updatePreviewMap(savedPreviewSize)
         previewSizeSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                previewSizeValue.text = "${progress}%"
-                prefs.edit().putInt("preview_size", progress).apply()
+                val percent = progress + previewMin
+                previewSizeValue.text = "${percent}%"
+                prefs.edit().putInt("preview_size", percent).apply()
+                updatePreviewMap(percent)
             }
             override fun onStartTrackingTouch(sb: SeekBar?) {}
             override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
+        findViewById<TextView>(R.id.previewSizeMinus).setOnClickListener { previewSizeSlider.progress -= 1 }
+        findViewById<TextView>(R.id.previewSizePlus).setOnClickListener { previewSizeSlider.progress += 1 }
+
+        // Run button action
+        val runActionKeys = arrayOf("fullscreen", "live", "emulator", "browser", "menu")
+        val runActionLabels = arrayOf(
+            "Full Screen Preview",
+            "Live Preview (floating)",
+            "Device Emulator",
+            "Open in Browser",
+            "Show menu (▾)"
+        )
+        val runActionValue = findViewById<TextView>(R.id.runActionValue)
+
+        fun showRunAction() {
+            val key = prefs.getString("run_action", "fullscreen")
+            runActionValue.text = runActionLabels[runActionKeys.indexOf(key).coerceAtLeast(0)]
+        }
+        showRunAction()
+
+        findViewById<android.widget.LinearLayout>(R.id.runActionRow).setOnClickListener {
+            val current = runActionKeys
+                .indexOf(prefs.getString("run_action", "fullscreen"))
+                .coerceAtLeast(0)
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Run button action")
+                .setSingleChoiceItems(runActionLabels, current) { dialog, which ->
+                    prefs.edit().putString("run_action", runActionKeys[which]).apply()
+                    showRunAction()
+                    dialog.dismiss()
+                }
+                .show()
+        }
 
         // Snippet bar
         val snippetBarSwitch = findViewById<Switch>(R.id.snippetBarSwitch)
@@ -154,6 +198,24 @@ class SettingsActivity : AppCompatActivity() {
                     "github.com/Ramsfield30/rams-editor")
             }
             startActivity(Intent.createChooser(intent, "Share Rams Editor"))
+        }
+    }
+
+    private fun updatePreviewMap(percent: Int) {
+        val screen = findViewById<FrameLayout>(R.id.previewMapScreen)
+        val box = findViewById<TextView>(R.id.previewMapBox)
+        val dm = resources.displayMetrics
+        val mapW = (140 * dm.density).toInt()
+        val scale = mapW.toFloat() / dm.widthPixels
+
+        screen.layoutParams.height = (dm.heightPixels * scale).toInt()
+        screen.requestLayout()
+
+        val boxW = (dm.widthPixels * percent / 100 * scale).toInt()
+        val boxH = (boxW * 600f / 420f).toInt()
+        box.layoutParams = FrameLayout.LayoutParams(boxW, boxH).apply {
+            leftMargin = (20 * scale).toInt()
+            topMargin = (80 * scale).toInt()
         }
     }
 

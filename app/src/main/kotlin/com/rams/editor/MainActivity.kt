@@ -161,7 +161,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnSave.setOnClickListener { saveCurrentFile() }
-        btnRun.setOnClickListener { checkOverlayPermission() }
+        btnRun.setOnClickListener { runPreview() }
+        
+        findViewById<TextView>(R.id.btnRunMenu).setOnClickListener { anchor ->
+            val menu = android.widget.PopupMenu(this, anchor)
+            menu.menu.add(0, 1, 0, "Live Preview")
+            menu.menu.add(0, 2, 1, "Full Screen Preview")
+            menu.menu.add(0, 3, 2, "Device Emulator")
+            menu.menu.add(0, 4, 3, "Open in Browser")
+            menu.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> checkOverlayPermission()
+                    else -> Toast.makeText(this, "${item.title}: coming soon", Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
+            menu.show()
+        }
         
         // Added exactly as requested
         btnSettings.setOnClickListener {
@@ -497,6 +513,25 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100) showPreview()
     }
 
+    private fun runPreview() {
+        val action = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
+            .getString("run_action", "fullscreen")
+        when (action) {
+            "live" -> checkOverlayPermission()
+            "emulator", "browser", "menu" -> {
+                Toast.makeText(this, "Coming soon, opening full screen", Toast.LENGTH_SHORT).show()
+                openFullScreenPreview()
+            }
+            else -> openFullScreenPreview()
+        }
+    }
+
+    private fun openFullScreenPreview() {
+        PreviewHolder.html = getPreviewContent()
+        PreviewHolder.baseUrl = getBaseUrl()
+        startActivity(Intent(this, FullScreenPreviewActivity::class.java))
+    }
+
     private fun showPreview() {
         floatingPreview?.show(getPreviewContent(), getBaseUrl())
     }
@@ -505,7 +540,7 @@ class MainActivity : AppCompatActivity() {
     private fun applySettings() {
         val prefs = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
 
-        codeEditor.setFontSizeSp(prefs.getInt("font_size", 14))
+        codeEditor.setFontSizeSp(prefs.getInt("font_size", 14).coerceIn(10, 24))
         codeEditor.setWordWrap(prefs.getBoolean("word_wrap", false))
         codeEditor.showLineNumbers = prefs.getBoolean("line_numbers", true)
         codeEditor.autoCloseEnabled = prefs.getBoolean("auto_close", true)
@@ -516,7 +551,7 @@ class MainActivity : AppCompatActivity() {
         (snippetRow1.parent as View).visibility = snippetVisibility
         (snippetRow2.parent as View).visibility = snippetVisibility
 
-        floatingPreview?.setSizePercent(prefs.getInt("preview_size", 50))
+        floatingPreview?.setSizePercent(prefs.getInt("preview_size", 50).coerceIn(25, 75))
     }
 
     override fun onResume() {
