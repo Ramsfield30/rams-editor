@@ -251,12 +251,10 @@ class FloatingPreview(private val context: Context) {
     }
 
     fun setSizePercent(percent: Int) {
-        val dm = context.resources.displayMetrics
-        val w = dm.widthPixels * percent / 100
-        val inner = w - (12 * dm.density).toInt()      // 6dp margin each side
-        val chrome = (80 * dm.density).toInt()         // toolbar + margins + status bar + home bar
+        val screenWidth = context.resources.displayMetrics.widthPixels
+        val w = screenWidth * percent / 100
         params.width = w
-        params.height = (inner * dm.heightPixels.toFloat() / dm.widthPixels).toInt() + chrome
+        params.height = (w * 600f / 420f).toInt()
         if (isShowing) windowManager.updateViewLayout(floatingView, params)
     }
 
