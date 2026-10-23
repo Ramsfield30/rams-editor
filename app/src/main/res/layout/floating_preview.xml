@@ -85,11 +85,17 @@
         </LinearLayout>
 
         <!-- WebView -->
-        <WebView
-            android:id="@+id/previewWebView"
+        <FrameLayout
+            android:id="@+id/previewWebHolder"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"/>
+            android:layout_weight="1">
+
+            <WebView
+                android:id="@+id/previewWebView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </FrameLayout>
 
         <!-- Home bar -->
         <LinearLayout

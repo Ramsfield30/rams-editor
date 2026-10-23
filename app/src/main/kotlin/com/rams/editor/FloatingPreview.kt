@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import android.widget.TextView
 import java.util.Calendar
 
@@ -50,6 +51,12 @@ class FloatingPreview(private val context: Context) {
             .inflate(R.layout.floating_preview, null)
 
         webView = floatingView?.findViewById(R.id.previewWebView)
+        
+        floatingView?.findViewById<FrameLayout>(R.id.previewWebHolder)
+            ?.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+                applyVirtualScreen(right - left, bottom - top)
+            }
+            
         webView?.apply {
             webViewClient = WebViewClient()
             settings.javaScriptEnabled = true
@@ -222,12 +229,34 @@ class FloatingPreview(private val context: Context) {
         }
     }
 
-    // NEW: preview window size from the settings slider (25-75% of screen width)
+    private fun applyVirtualScreen(holderW: Int, holderH: Int) {
+        val wv = webView ?: return
+        if (holderW <= 0 || holderH <= 0) return
+
+        // Page lays out at your real screen width, then the view is shrunk to fit
+        val virtualW = context.resources.displayMetrics.widthPixels
+        val virtualH = (virtualW.toFloat() * holderH / holderW).toInt()
+        val scale = holderW.toFloat() / virtualW
+
+        val lp = wv.layoutParams as FrameLayout.LayoutParams
+        if (lp.width == virtualW && lp.height == virtualH && wv.scaleX == scale) return
+
+        lp.width = virtualW
+        lp.height = virtualH
+        wv.layoutParams = lp
+        wv.pivotX = 0f
+        wv.pivotY = 0f
+        wv.scaleX = scale
+        wv.scaleY = scale
+    }
+
     fun setSizePercent(percent: Int) {
-        val screenWidth = context.resources.displayMetrics.widthPixels
-        val w = screenWidth * percent / 100
+        val dm = context.resources.displayMetrics
+        val w = dm.widthPixels * percent / 100
+        val inner = w - (12 * dm.density).toInt()      // 6dp margin each side
+        val chrome = (80 * dm.density).toInt()         // toolbar + margins + status bar + home bar
         params.width = w
-        params.height = (w * 600f / 420f).toInt()
+        params.height = (inner * dm.heightPixels.toFloat() / dm.widthPixels).toInt() + chrome
         if (isShowing) windowManager.updateViewLayout(floatingView, params)
     }
 
