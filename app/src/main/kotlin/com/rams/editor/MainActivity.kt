@@ -571,6 +571,7 @@ class MainActivity : AppCompatActivity() {
         ConsoleLog.clear()
         PreviewHolder.html = getPreviewContent()
         PreviewHolder.baseUrl = getBaseUrl()
+        PreviewHolder.fileName = lastActiveHtmlFile?.name ?: "untitled.html"
         startActivity(Intent(this, FullScreenPreviewActivity::class.java))
     }
 

@@ -3,6 +3,7 @@ package com.rams.editor
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.View
+import android.webkit.ConsoleMessage
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 object PreviewHolder {
     var html: String = ""
     var baseUrl: String? = null
+    var fileName: String = "index.html"
 }
 
 class FullScreenPreviewActivity : AppCompatActivity() {
@@ -32,6 +34,16 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         val title = findViewById<TextView>(R.id.previewTitle)
 
         webView = findViewById(R.id.previewWebView)
+        
+        val subtitle = findViewById<TextView>(R.id.previewSubtitle)
+        findViewById<TextView>(R.id.btnPreviewBack).setOnClickListener { finish() }
+
+        fun updateSubtitle() {
+            val d = resources.displayMetrics.density
+            subtitle.text = "${PreviewHolder.fileName} · ${(webView.width / d).toInt()}×${(webView.height / d).toInt()}"
+        }
+        webView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateSubtitle() }
+        
         webView.apply {
             webViewClient = WebViewClient()
             webChromeClient = ConsoleLog.chromeClient { t -> title.text = t }
@@ -77,10 +89,15 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         val panel = findViewById<LinearLayout>(R.id.fsConsolePanel)
         val text = findViewById<TextView>(R.id.fsConsoleText)
         val scroll = findViewById<ScrollView>(R.id.fsConsoleScroll)
+        val errorDot = findViewById<View>(R.id.consoleErrorDot)
 
         fun render() {
             text.text = ConsoleLog.render()
             scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+            
+            val hasError = ConsoleLog.entries.any { it.level == ConsoleMessage.MessageLevel.ERROR }
+            errorDot.visibility =
+                if (hasError && panel.visibility != View.VISIBLE) View.VISIBLE else View.GONE
         }
 
         previousListener = ConsoleLog.onChange
