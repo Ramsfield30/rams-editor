@@ -1,6 +1,9 @@
 package com.rams.editor
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
@@ -13,8 +16,11 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class FloatingPreview(private val context: Context) {
 
@@ -52,12 +58,10 @@ class FloatingPreview(private val context: Context) {
             .inflate(R.layout.floating_preview, null)
 
         webView = floatingView?.findViewById(R.id.previewWebView)
-        
         floatingView?.findViewById<FrameLayout>(R.id.previewWebHolder)
             ?.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
                 applyVirtualScreen(right - left, bottom - top)
             }
-            
         webView?.apply {
             webViewClient = WebViewClient()
             webChromeClient = ConsoleLog.chromeClient()
@@ -88,12 +92,14 @@ class FloatingPreview(private val context: Context) {
         btnFullscreen?.setOnClickListener { }
 
         val timeView = floatingView?.findViewById<TextView>(R.id.previewTime)
+        val batteryView = floatingView?.findViewById<ImageView>(R.id.previewBattery)
         clockRunnable = object : Runnable {
             override fun run() {
-                val cal = Calendar.getInstance()
-                val h = cal.get(Calendar.HOUR_OF_DAY)
-                val m = cal.get(Calendar.MINUTE)
-                timeView?.text = String.format("%02d:%02d", h, m)
+                // Follow the phone's own 12h / 24h setting
+                val pattern =
+                    if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
+                timeView?.text = SimpleDateFormat(pattern, Locale.getDefault()).format(Date())
+                updateBattery(batteryView)
                 clockHandler.postDelayed(this, 30000)
             }
         }
@@ -232,11 +238,19 @@ class FloatingPreview(private val context: Context) {
         }
     }
 
+    fun setSizePercent(percent: Int) {
+        val screenWidth = context.resources.displayMetrics.widthPixels
+        val w = screenWidth * percent / 100
+        params.width = w
+        params.height = (w * 600f / 420f).toInt()
+        if (isShowing) windowManager.updateViewLayout(floatingView, params)
+    }
+
+    // Lay the page out at your real screen width, then shrink the view to fit
     private fun applyVirtualScreen(holderW: Int, holderH: Int) {
         val wv = webView ?: return
         if (holderW <= 0 || holderH <= 0) return
 
-        // Page lays out at your real screen width, then the view is shrunk to fit
         val virtualW = context.resources.displayMetrics.widthPixels
         val virtualH = (virtualW.toFloat() * holderH / holderW).toInt()
         val scale = holderW.toFloat() / virtualW
@@ -253,12 +267,15 @@ class FloatingPreview(private val context: Context) {
         wv.scaleY = scale
     }
 
-    fun setSizePercent(percent: Int) {
-        val screenWidth = context.resources.displayMetrics.widthPixels
-        val w = screenWidth * percent / 100
-        params.width = w
-        params.height = (w * 600f / 420f).toInt()
-        if (isShowing) windowManager.updateViewLayout(floatingView, params)
+    // Battery icon in the fake status bar follows the real battery level
+    private fun updateBattery(view: ImageView?) {
+        val intent = context.registerReceiver(
+            null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        ) ?: return
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+        if (level < 0 || scale <= 0) return
+        view?.setImageLevel(level * 10000 / scale)
     }
 
     fun dismiss() {

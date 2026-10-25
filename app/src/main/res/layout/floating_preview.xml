@@ -46,71 +46,101 @@
 
     </LinearLayout>
 
-    <!-- Phone mockup -->
-    <LinearLayout
+    <!-- Phone body -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:background="@drawable/phone_frame"
-        android:layout_margin="6dp">
+        android:layout_margin="6dp"
+        android:padding="5dp"
+        android:background="@drawable/phone_frame">
 
-        <!-- Status bar -->
+        <!-- Screen -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="20dp"
-            android:background="#000000"
-            android:orientation="horizontal"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:gravity="center_vertical">
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@drawable/phone_screen"
+            android:clipToOutline="true">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:id="@+id/previewTime"
-                android:text="9:41"
-                android:textColor="#FFFFFF"
-                android:textSize="9sp"
-                android:textStyle="bold"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="▌▌▌"
-                android:textColor="#FFFFFF"
-                android:textSize="7sp"/>
-
-        </LinearLayout>
-
-        <!-- WebView -->
-        <FrameLayout
-            android:id="@+id/previewWebHolder"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <WebView
-                android:id="@+id/previewWebView"
+            <!-- Status bar -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
-        </FrameLayout>
+                android:layout_height="22dp"
+                android:background="#000000"
+                android:orientation="horizontal"
+                android:paddingStart="14dp"
+                android:paddingEnd="12dp"
+                android:gravity="center_vertical">
 
-        <!-- Home bar -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="16dp"
-            android:background="#000000"
-            android:gravity="center">
+                <TextView
+                    android:id="@+id/previewTime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="9:41"
+                    android:textColor="#FFFFFF"
+                    android:textSize="9sp"
+                    android:textStyle="bold"/>
 
-            <View
-                android:layout_width="40dp"
-                android:layout_height="3dp"
-                android:background="#444444"/>
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:src="@drawable/ic_status_wifi"/>
+
+                <ImageView
+                    android:layout_width="11dp"
+                    android:layout_height="11dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_status_signal"/>
+
+                <ImageView
+                    android:id="@+id/previewBattery"
+                    android:layout_width="18dp"
+                    android:layout_height="11dp"
+                    android:layout_marginStart="5dp"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/ic_status_battery"/>
+
+            </LinearLayout>
+
+            <!-- Page -->
+            <FrameLayout
+                android:id="@+id/previewWebHolder"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <WebView
+                    android:id="@+id/previewWebView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"/>
+            </FrameLayout>
+
+            <!-- Home bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:background="#000000"
+                android:gravity="center">
+
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="3dp"
+                    android:background="@drawable/home_pill"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 
-    </LinearLayout>
+        <!-- Punch-hole camera -->
+        <View
+            android:layout_width="9dp"
+            android:layout_height="9dp"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="7dp"
+            android:background="@drawable/camera_hole"/>
+
+    </FrameLayout>
 
 </LinearLayout>
