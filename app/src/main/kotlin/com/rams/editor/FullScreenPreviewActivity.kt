@@ -32,18 +32,9 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         setContentView(R.layout.activity_full_preview)
 
         val title = findViewById<TextView>(R.id.previewTitle)
+        val subtitle = findViewById<TextView>(R.id.previewSubtitle)
 
         webView = findViewById(R.id.previewWebView)
-        
-        val subtitle = findViewById<TextView>(R.id.previewSubtitle)
-        findViewById<TextView>(R.id.btnPreviewBack).setOnClickListener { finish() }
-
-        fun updateSubtitle() {
-            val d = resources.displayMetrics.density
-            subtitle.text = "${PreviewHolder.fileName} · ${(webView.width / d).toInt()}×${(webView.height / d).toInt()}"
-        }
-        webView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateSubtitle() }
-        
         webView.apply {
             webViewClient = WebViewClient()
             webChromeClient = ConsoleLog.chromeClient { t -> title.text = t }
@@ -55,6 +46,15 @@ class FullScreenPreviewActivity : AppCompatActivity() {
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
         }
+
+        findViewById<View>(R.id.btnPreviewBack).setOnClickListener { finish() }
+
+        fun updateSubtitle() {
+            val d = resources.displayMetrics.density
+            subtitle.text = "${PreviewHolder.fileName} · " +
+                "${(webView.width / d).toInt()}×${(webView.height / d).toInt()}"
+        }
+        webView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateSubtitle() }
 
         setupConsole()
 
@@ -94,8 +94,9 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         fun render() {
             text.text = ConsoleLog.render()
             scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
-            
-            val hasError = ConsoleLog.entries.any { it.level == ConsoleMessage.MessageLevel.ERROR }
+            val hasError = ConsoleLog.entries.any {
+                it.level == ConsoleMessage.MessageLevel.ERROR
+            }
             errorDot.visibility =
                 if (hasError && panel.visibility != View.VISIBLE) View.VISIBLE else View.GONE
         }

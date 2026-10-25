@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabContainer: LinearLayout
     private lateinit var fileTreeRecycler: RecyclerView
     private lateinit var projectName: TextView
-    
+
     // Added exactly as requested
     private lateinit var snippetRow1: LinearLayout
     private lateinit var snippetRow2: LinearLayout
@@ -66,12 +66,12 @@ class MainActivity : AppCompatActivity() {
         tabContainer = findViewById(R.id.tabContainer)
         fileTreeRecycler = findViewById(R.id.fileTreeRecycler)
         projectName = findViewById(R.id.projectName)
-        
+
         // Added exactly as requested
         btnSettings = findViewById(R.id.btnSettings)
 
         floatingPreview = FloatingPreview(this)
-        
+
         setupConsole()
 
         // Added exactly as requested
@@ -166,7 +166,8 @@ class MainActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener { saveCurrentFile() }
         btnRun.setOnClickListener { runPreview() }
-        
+
+        // Run menu (▾) — only visible when Settings → Run Button = "Show menu"
         findViewById<TextView>(R.id.btnRunMenu).setOnClickListener { anchor ->
             val menu = android.widget.PopupMenu(this, anchor)
             menu.menu.add(0, 1, 0, "Live Preview")
@@ -176,13 +177,16 @@ class MainActivity : AppCompatActivity() {
             menu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> checkOverlayPermission()
-                    else -> Toast.makeText(this, "${item.title}: coming soon", Toast.LENGTH_SHORT).show()
+                    2 -> openFullScreenPreview()
+                    else -> Toast.makeText(
+                        this, "${item.title}: coming soon", Toast.LENGTH_SHORT
+                    ).show()
                 }
                 true
             }
             menu.show()
         }
-        
+
         // Added exactly as requested
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -252,45 +256,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun restoreLastSession() {
-    val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
-    val lastProjectPath = prefs.getString("last_project", null)
-    val tabPaths = prefs.getString("open_tabs", null)
-    val activeTab = prefs.getInt("active_tab", 0)
+        val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+        val lastProjectPath = prefs.getString("last_project", null)
+        val tabPaths = prefs.getString("open_tabs", null)
+        val activeTab = prefs.getInt("active_tab", 0)
 
-    if (lastProjectPath != null) {
-        val projectDir = File(lastProjectPath)
-        if (projectDir.exists()) {
-            ProjectManager.setCurrentProject(projectDir)
-            projectName.text = projectDir.name.uppercase()
-            fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+        if (lastProjectPath != null) {
+            val projectDir = File(lastProjectPath)
+            if (projectDir.exists()) {
+                ProjectManager.setCurrentProject(projectDir)
+                projectName.text = projectDir.name.uppercase()
+                fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
 
-            // Restore all tabs
-            if (tabPaths != null) {
-                tabPaths.split("|").forEach { path ->
-                    val file = File(path)
-                    if (file.exists()) openFileInTab(file)
-                }
-                // Switch to last active tab
-                if (activeTab >= 0 && activeTab < openTabs.size) {
-                    switchToTab(activeTab)
+                // Restore all tabs
+                if (tabPaths != null) {
+                    tabPaths.split("|").forEach { path ->
+                        val file = File(path)
+                        if (file.exists()) openFileInTab(file)
+                    }
+                    // Switch to last active tab
+                    if (activeTab >= 0 && activeTab < openTabs.size) {
+                        switchToTab(activeTab)
+                    }
                 }
             }
         }
     }
-}
 
     private fun saveSession() {
-    val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
-    val editor = prefs.edit()
-    ProjectManager.getCurrentProject()?.let {
-        editor.putString("last_project", it.absolutePath)
+        val prefs = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        ProjectManager.getCurrentProject()?.let {
+            editor.putString("last_project", it.absolutePath)
+        }
+        // Save all open tab paths
+        val tabPaths = openTabs.joinToString("|") { it.absolutePath }
+        editor.putString("open_tabs", tabPaths)
+        editor.putInt("active_tab", currentTabIndex)
+        editor.apply()
     }
-    // Save all open tab paths
-    val tabPaths = openTabs.joinToString("|") { it.absolutePath }
-    editor.putString("open_tabs", tabPaths)
-    editor.putInt("active_tab", currentTabIndex)
-    editor.apply()
-}
 
     private fun createNewFolder(parentDir: File) {
         val input = android.widget.EditText(this)
@@ -370,7 +374,7 @@ class MainActivity : AppCompatActivity() {
         addTabView(file, currentTabIndex)
         codeEditor.setCode(file.readText())
         fileName.text = file.name
-        
+
         // Added exactly as requested
         // Update snippet bar mode based on file type
         val ext = file.extension.lowercase()
@@ -406,7 +410,7 @@ class MainActivity : AppCompatActivity() {
         val file = openTabs[index]
         codeEditor.setCode(file.readText())
         fileName.text = file.name
-        
+
         // Added exactly as requested
         val ext = openTabs[index].extension.lowercase()
         snippetBar.setMode(ext)
@@ -559,15 +563,19 @@ class MainActivity : AppCompatActivity() {
             .getString("run_action", "fullscreen")
         when (action) {
             "live" -> checkOverlayPermission()
-            "emulator", "browser", "menu" -> {
-                Toast.makeText(this, "Coming soon, opening full screen", Toast.LENGTH_SHORT).show()
+            "emulator", "browser" -> {
+                Toast.makeText(
+                    this, "Coming soon, opening full screen", Toast.LENGTH_SHORT
+                ).show()
                 openFullScreenPreview()
             }
-            else -> openFullScreenPreview()
+            else -> openFullScreenPreview() // "fullscreen" and "menu"
         }
     }
 
     private fun openFullScreenPreview() {
+        // Linked CSS/JS is read from disk, so write pending edits first
+        if (hasUnsavedChanges) saveCurrentFile()
         ConsoleLog.clear()
         PreviewHolder.html = getPreviewContent()
         PreviewHolder.baseUrl = getBaseUrl()
@@ -576,10 +584,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPreview() {
+        if (hasUnsavedChanges) saveCurrentFile()
         floatingPreview?.show(getPreviewContent(), getBaseUrl())
     }
 
-    // Added exactly as requested
     private fun applySettings() {
         val prefs = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
 
@@ -595,6 +603,11 @@ class MainActivity : AppCompatActivity() {
         (snippetRow2.parent as View).visibility = snippetVisibility
 
         floatingPreview?.setSizePercent(prefs.getInt("preview_size", 50).coerceIn(25, 75))
+
+        // ▾ menu next to ▶ only appears when chosen in Settings
+        val runAction = prefs.getString("run_action", "fullscreen")
+        findViewById<TextView>(R.id.btnRunMenu).visibility =
+            if (runAction == "menu") View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
@@ -604,13 +617,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        if (hasUnsavedChanges) saveCurrentFile()
         saveSession()
         floatingPreview?.dismiss()
     }
 
     override fun onDestroy() {
-        ConsoleLog.onChange = null
         autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
+        ConsoleLog.onChange = null
         floatingPreview?.dismiss()
         super.onDestroy()
     }

@@ -188,14 +188,14 @@ class CodeEditor @JvmOverloads constructor(
             }
 
             override fun afterTextChanged(s: Editable?) {
+                if (s == null) return
+                // Tell the preview and auto-save first, so coloring can't delay them
+                onTextChangedListener?.invoke(s.toString())
                 if (isAutoCompleting) return
-                s?.let {
-                    removeTextChangedListener(this)
-                    SyntaxHighlighter.highlight(it)
-                    addTextChangedListener(this)
-                    onTextChangedListener?.invoke(it.toString())
-                    updateCurrentLine()
-                }
+                removeTextChangedListener(this)
+                SyntaxHighlighter.highlight(s)
+                addTextChangedListener(this)
+                updateCurrentLine()
             }
         })
     }
