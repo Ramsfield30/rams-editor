@@ -88,9 +88,6 @@ class FloatingPreview(private val context: Context) {
         val btnClose = floatingView?.findViewById<TextView>(R.id.btnClose)
         btnClose?.setOnClickListener { dismiss() }
 
-        val btnFullscreen = floatingView?.findViewById<TextView>(R.id.btnFullscreen)
-        btnFullscreen?.setOnClickListener { }
-
         val timeView = floatingView?.findViewById<TextView>(R.id.previewTime)
         val batteryView = floatingView?.findViewById<ImageView>(R.id.previewBattery)
         clockRunnable = object : Runnable {
@@ -122,21 +119,29 @@ class FloatingPreview(private val context: Context) {
         )
     }
 
-    fun updateCss(cssContent: String) {
+    fun updateCss(cssContent: String, fileName: String) {
         val escaped = cssContent
             .replace("\\", "\\\\")
             .replace("'", "\\'")
             .replace("\n", "\\n")
             .replace("\r", "")
+        val name = fileName.replace("\\", "\\\\").replace("'", "\\'")
+        val id = "rams-live-css-" + fileName.replace(Regex("[^A-Za-z0-9_-]"), "_")
         webView?.evaluateJavascript(
             """
-            var style = document.getElementById('rams-live-css');
-            if (!style) {
-                style = document.createElement('style');
-                style.id = 'rams-live-css';
-                document.head.appendChild(style);
-            }
-            style.textContent = '$escaped';
+            (function() {
+                document.querySelectorAll('link[rel~="stylesheet"], style[data-src]').forEach(function(n) {
+                    var ref = n.getAttribute('data-src') || n.getAttribute('href') || '';
+                    if (ref.split('?')[0].split('/').pop() === '$name') { n.disabled = true; }
+                });
+                var style = document.getElementById('$id');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = '$id';
+                    document.head.appendChild(style);
+                }
+                style.textContent = '$escaped';
+            })();
             """.trimIndent(),
             null
         )

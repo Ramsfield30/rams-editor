@@ -27,15 +27,6 @@
             android:gravity="center_vertical"/>
 
         <TextView
-            android:id="@+id/btnFullscreen"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:text="⛶"
-            android:textSize="14sp"
-            android:textColor="#6666AA"
-            android:gravity="center"/>
-
-        <TextView
             android:id="@+id/btnClose"
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -67,7 +58,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="22dp"
-                android:background="#000000"
+                android:background="@drawable/status_bar_bg"
                 android:orientation="horizontal"
                 android:paddingStart="14dp"
                 android:paddingEnd="12dp"
@@ -121,7 +112,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="16dp"
-                android:background="#000000"
+                android:background="@drawable/home_bar_bg"
                 android:gravity="center">
 
                 <View

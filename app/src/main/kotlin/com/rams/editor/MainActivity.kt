@@ -46,6 +46,10 @@ class MainActivity : AppCompatActivity() {
     private var autoSaveRunnable: Runnable? = null
     private var hasUnsavedChanges = false
 
+    // Waits a moment after typing stops before updating the live preview
+    private val previewHandler = Handler(Looper.getMainLooper())
+    private var previewRunnable: Runnable? = null
+
     private val openTabs = mutableListOf<File>()
     private var currentTabIndex = -1
     private lateinit var fileTreeAdapter: FileTreeAdapter
@@ -196,7 +200,7 @@ class MainActivity : AppCompatActivity() {
             hasUnsavedChanges = true
             updateTitleWithDot()
             if (floatingPreview?.isVisible() == true) {
-                updatePreview(code)
+                schedulePreviewUpdate(code)
             }
             scheduleAutoSave(code)
         }
@@ -208,23 +212,24 @@ class MainActivity : AppCompatActivity() {
         }, 300)
     }
 
+    private fun schedulePreviewUpdate(code: String) {
+        previewRunnable?.let { previewHandler.removeCallbacks(it) }
+        val tabAtSchedule = currentTabIndex
+        previewRunnable = Runnable {
+            if (tabAtSchedule == currentTabIndex) updatePreview(code)
+        }
+        previewHandler.postDelayed(previewRunnable!!, 200)
+    }
+
     private fun updatePreview(code: String) {
         val currentFile = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
             openTabs[currentTabIndex] else null
+        val name = currentFile?.name ?: ""
 
         when {
-            currentFile?.name?.endsWith(".css") == true -> {
-                // Inject CSS directly — instant, no reload
-                floatingPreview?.updateCss(code)
-            }
-            currentFile?.name?.endsWith(".js") == true -> {
-                // Inject JS directly
-                floatingPreview?.updateJs(code)
-            }
-            else -> {
-                // HTML — full update
-                floatingPreview?.update(code, getBaseUrl())
-            }
+            name.endsWith(".css") -> floatingPreview?.updateCss(code, name)
+            name.endsWith(".js") -> floatingPreview?.updateJs(code)
+            else -> floatingPreview?.update(inlineLinkedFiles(code), getBaseUrl())
         }
     }
 
@@ -240,6 +245,8 @@ class MainActivity : AppCompatActivity() {
         val currentFile = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
             openTabs[currentTabIndex] else null
 
+        var html = codeEditor.getCode()
+
         // For CSS or JS — show the last active HTML file
         if (currentFile != null &&
             (currentFile.name.endsWith(".css") || currentFile.name.endsWith(".js"))
@@ -248,11 +255,53 @@ class MainActivity : AppCompatActivity() {
                 ?: currentFile.parentFile?.listFiles()
                     ?.firstOrNull { it.name.endsWith(".html") }
             if (htmlFile != null && htmlFile.exists()) {
-                return htmlFile.readText()
+                html = htmlFile.readText()
             }
         }
+        return inlineLinkedFiles(html)
+    }
 
-        return codeEditor.getCode()
+    // Puts linked stylesheets straight into the page, using what is in the editor
+    // for the open file (even unsaved) and the saved file for the others.
+    private fun inlineLinkedFiles(html: String): String {
+        val baseDir = (lastActiveHtmlFile
+            ?: if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+                openTabs[currentTabIndex] else null
+            )?.parentFile ?: return html
+
+        val linkRegex = Regex("<link\\b[^>]*>", RegexOption.IGNORE_CASE)
+        val relRegex = Regex("rel\\s*=\\s*[\"']?stylesheet", RegexOption.IGNORE_CASE)
+        val hrefRegex = Regex("href\\s*=\\s*[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
+
+        return linkRegex.replace(html) { m ->
+            val tag = m.value
+            val href = hrefRegex.find(tag)?.groupValues?.get(1)
+            if (href == null || !relRegex.containsMatchIn(tag) ||
+                href.contains("://") || href.startsWith("//") || href.startsWith("data:")
+            ) {
+                tag
+            } else {
+                try {
+                    val file = File(baseDir, href.substringBefore('?').substringBefore('#'))
+                        .canonicalFile
+                    if (file.parentFile?.canonicalFile != baseDir.canonicalFile) {
+                        tag
+                    } else {
+                        val current = if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+                            openTabs[currentTabIndex] else null
+                        val css = when {
+                            current != null && current.canonicalFile == file ->
+                                codeEditor.getCode()
+                            file.exists() -> file.readText()
+                            else -> null
+                        }
+                        if (css == null) tag else "<style data-src=\"$href\">\n$css\n</style>"
+                    }
+                } catch (e: Exception) {
+                    tag
+                }
+            }
+        }
     }
 
     private fun restoreLastSession() {
@@ -574,7 +623,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFullScreenPreview() {
-        // Linked CSS/JS is read from disk, so write pending edits first
+        // Write pending edits first so the saved files are up to date
         if (hasUnsavedChanges) saveCurrentFile()
         ConsoleLog.clear()
         PreviewHolder.html = getPreviewContent()
@@ -623,6 +672,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        previewRunnable?.let { previewHandler.removeCallbacks(it) }
         autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
         ConsoleLog.onChange = null
         floatingPreview?.dismiss()
