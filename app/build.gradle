@@ -3,6 +3,8 @@ id 'com.android.application'
 id 'kotlin-android'
 }
 
+def runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
 android {
 namespace 'com.rams.editor'
 compileSdk 34
@@ -11,13 +13,29 @@ defaultConfig {
 applicationId "com.rams.editor"
 minSdk 21
 targetSdk 34
-versionCode 1
-versionName "1.0"
+versionCode runNumber
+versionName "1.0.${runNumber}"
+}
+
+signingConfigs {
+rams {
+def ksPath = System.getenv("KEYSTORE_PATH")
+if (ksPath) {
+storeFile file(ksPath)
+storeType "pkcs12"
+storePassword System.getenv("KEYSTORE_PASSWORD")
+keyAlias "rams"
+keyPassword System.getenv("KEYSTORE_PASSWORD")
+}
+}
 }
 
 buildTypes {
 debug {
 minifyEnabled false
+if (System.getenv("KEYSTORE_PATH")) {
+signingConfig signingConfigs.rams
+}
 }
 }
 

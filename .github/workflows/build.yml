@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
     steps:
       - name: Checkout code
@@ -24,11 +28,38 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Create signing key (first run only)
+        run: |
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "Add the KEYSTORE_PASSWORD secret first"
+            exit 1
+          fi
+          if [ ! -f app/rams.p12 ]; then
+            keytool -genkeypair -keystore app/rams.p12 -storetype PKCS12 \
+              -alias rams -keyalg RSA -keysize 2048 -validity 36500 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+              -dname "CN=Rams Editor"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -f app/rams.p12
+            git commit -m "Add app signing key"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
       - name: Build APK
         run: gradle assembleDebug
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/app/rams.p12
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: rams-editor-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Rams Editor 1.0.${{ github.run_number }}
+          files: app/build/outputs/apk/debug/*.apk
