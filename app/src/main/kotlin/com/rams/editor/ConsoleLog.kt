@@ -10,6 +10,11 @@ object ConsoleLog {
 
     data class Entry(val level: ConsoleMessage.MessageLevel, val text: String)
 
+    const val FILTER_ALL = 0
+    const val FILTER_INFO = 1
+    const val FILTER_WARNING = 2
+    const val FILTER_ERROR = 3
+
     val entries = mutableListOf<Entry>()
     var onChange: (() -> Unit)? = null
 
@@ -24,20 +29,39 @@ object ConsoleLog {
         onChange?.invoke()
     }
 
-    fun render(): SpannableStringBuilder {
+    private fun matches(e: Entry, filter: Int): Boolean = when (filter) {
+        FILTER_INFO ->
+            e.level != ConsoleMessage.MessageLevel.WARNING &&
+                e.level != ConsoleMessage.MessageLevel.ERROR
+        FILTER_WARNING -> e.level == ConsoleMessage.MessageLevel.WARNING
+        FILTER_ERROR -> e.level == ConsoleMessage.MessageLevel.ERROR
+        else -> true
+    }
+
+    private fun prefixFor(level: ConsoleMessage.MessageLevel): String = when (level) {
+        ConsoleMessage.MessageLevel.ERROR -> "✖ "
+        ConsoleMessage.MessageLevel.WARNING -> "⚠ "
+        else -> ""
+    }
+
+    fun render(filter: Int = FILTER_ALL): SpannableStringBuilder {
         val sb = SpannableStringBuilder()
-        for (e in entries) {
-            val (prefix, color) = when (e.level) {
-                ConsoleMessage.MessageLevel.ERROR -> "✖ " to 0xFFF48771.toInt()
-                ConsoleMessage.MessageLevel.WARNING -> "⚠ " to 0xFFCCA700.toInt()
-                else -> "" to 0xFFD4D4D4.toInt()
+        for (e in entries.filter { matches(it, filter) }) {
+            val color = when (e.level) {
+                ConsoleMessage.MessageLevel.ERROR -> 0xFFF48771.toInt()
+                ConsoleMessage.MessageLevel.WARNING -> 0xFFCCA700.toInt()
+                else -> 0xFFD4D4D4.toInt()
             }
             val start = sb.length
-            sb.append(prefix).append(e.text).append("\n")
+            sb.append(prefixFor(e.level)).append(e.text).append("\n")
             sb.setSpan(ForegroundColorSpan(color), start, sb.length, 0)
         }
         return sb
     }
+
+    fun plainText(filter: Int = FILTER_ALL): String =
+        entries.filter { matches(it, filter) }
+            .joinToString("\n") { prefixFor(it.level) + it.text }
 
     fun chromeClient(onTitle: ((String) -> Unit)? = null) = object : WebChromeClient() {
         override fun onConsoleMessage(m: ConsoleMessage): Boolean {

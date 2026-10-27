@@ -1,6 +1,9 @@
 package com.rams.editor
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.webkit.ConsoleMessage
@@ -24,6 +27,7 @@ class FullScreenPreviewActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var previousListener: (() -> Unit)? = null
+    private var filter = ConsoleLog.FILTER_ALL
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,9 +95,23 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         val scroll = findViewById<ScrollView>(R.id.fsConsoleScroll)
         val errorDot = findViewById<View>(R.id.consoleErrorDot)
 
+        val chips = listOf(
+            findViewById<TextView>(R.id.fsFilterAll) to ConsoleLog.FILTER_ALL,
+            findViewById<TextView>(R.id.fsFilterInfo) to ConsoleLog.FILTER_INFO,
+            findViewById<TextView>(R.id.fsFilterWarning) to ConsoleLog.FILTER_WARNING,
+            findViewById<TextView>(R.id.fsFilterError) to ConsoleLog.FILTER_ERROR
+        )
+
         fun render() {
-            text.text = ConsoleLog.render()
+            text.text = ConsoleLog.render(filter)
             scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+
+            chips.forEach { (chip, f) ->
+                val selected = f == filter
+                chip.setBackgroundColor(if (selected) 0xFF37373D.toInt() else 0x00000000)
+                chip.setTextColor(if (selected) 0xFFFFFFFF.toInt() else 0xFFAAAAAA.toInt())
+            }
+
             val hasError = ConsoleLog.entries.any {
                 it.level == ConsoleMessage.MessageLevel.ERROR
             }
@@ -104,6 +122,13 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         previousListener = ConsoleLog.onChange
         ConsoleLog.onChange = { runOnUiThread { render() } }
 
+        chips.forEach { (chip, f) ->
+            chip.setOnClickListener {
+                filter = f
+                render()
+            }
+        }
+
         findViewById<TextView>(R.id.btnPreviewConsole).setOnClickListener {
             if (panel.visibility == View.VISIBLE) {
                 panel.visibility = View.GONE
@@ -112,6 +137,18 @@ class FullScreenPreviewActivity : AppCompatActivity() {
                 render()
             }
         }
+
+        findViewById<TextView>(R.id.fsConsoleCopy).setOnClickListener {
+            val toCopy = ConsoleLog.plainText(filter)
+            if (toCopy.isEmpty()) {
+                Toast.makeText(this, "Nothing to copy", Toast.LENGTH_SHORT).show()
+            } else {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("console", toCopy))
+                Toast.makeText(this, "Console copied", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         findViewById<TextView>(R.id.fsConsoleClear).setOnClickListener { ConsoleLog.clear() }
         findViewById<TextView>(R.id.fsConsoleClose).setOnClickListener {
             panel.visibility = View.GONE
