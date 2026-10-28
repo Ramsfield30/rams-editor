@@ -684,19 +684,6 @@ class MainActivity : AppCompatActivity() {
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {
-            background: #1e1e1e;
-            color: white;
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        h1 { color: #4CAF50; }
-    </style>
 </head>
 <body>
     <h1>Welcome to Rams Editor!</h1>
