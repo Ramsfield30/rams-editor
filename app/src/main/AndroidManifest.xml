@@ -38,6 +38,10 @@
             android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".FullScreenPreviewActivity" />
 
+        <activity
+            android:name=".DeviceEmulatorActivity"
+            android:windowSoftInputMode="adjustPan"/>
+
     </application>
 
 </manifest>

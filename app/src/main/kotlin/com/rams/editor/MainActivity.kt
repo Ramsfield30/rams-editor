@@ -182,6 +182,7 @@ class MainActivity : AppCompatActivity() {
                 when (item.itemId) {
                     1 -> checkOverlayPermission()
                     2 -> openFullScreenPreview()
+                    3 -> openDeviceEmulator()
                     else -> Toast.makeText(
                         this, "${item.title}: coming soon", Toast.LENGTH_SHORT
                     ).show()
@@ -612,7 +613,8 @@ class MainActivity : AppCompatActivity() {
             .getString("run_action", "fullscreen")
         when (action) {
             "live" -> checkOverlayPermission()
-            "emulator", "browser" -> {
+            "emulator" -> openDeviceEmulator()
+            "browser" -> {
                 Toast.makeText(
                     this, "Coming soon, opening full screen", Toast.LENGTH_SHORT
                 ).show()
@@ -630,6 +632,15 @@ class MainActivity : AppCompatActivity() {
         PreviewHolder.baseUrl = getBaseUrl()
         PreviewHolder.fileName = lastActiveHtmlFile?.name ?: "untitled.html"
         startActivity(Intent(this, FullScreenPreviewActivity::class.java))
+    }
+
+    private fun openDeviceEmulator() {
+        if (hasUnsavedChanges) saveCurrentFile()
+        ConsoleLog.clear()
+        PreviewHolder.html = getPreviewContent()
+        PreviewHolder.baseUrl = getBaseUrl()
+        PreviewHolder.fileName = lastActiveHtmlFile?.name ?: "untitled.html"
+        startActivity(Intent(this, DeviceEmulatorActivity::class.java))
     }
 
     private fun showPreview() {
