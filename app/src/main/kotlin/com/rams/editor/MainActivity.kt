@@ -183,6 +183,7 @@ class MainActivity : AppCompatActivity() {
                     1 -> checkOverlayPermission()
                     2 -> openFullScreenPreview()
                     3 -> openDeviceEmulator()
+                    4 -> openInBrowser()
                     else -> Toast.makeText(
                         this, "${item.title}: coming soon", Toast.LENGTH_SHORT
                     ).show()
@@ -614,12 +615,7 @@ class MainActivity : AppCompatActivity() {
         when (action) {
             "live" -> checkOverlayPermission()
             "emulator" -> openDeviceEmulator()
-            "browser" -> {
-                Toast.makeText(
-                    this, "Coming soon, opening full screen", Toast.LENGTH_SHORT
-                ).show()
-                openFullScreenPreview()
-            }
+            "browser" -> openInBrowser()
             else -> openFullScreenPreview() // "fullscreen" and "menu"
         }
     }
@@ -641,6 +637,38 @@ class MainActivity : AppCompatActivity() {
         PreviewHolder.baseUrl = getBaseUrl()
         PreviewHolder.fileName = lastActiveHtmlFile?.name ?: "untitled.html"
         startActivity(Intent(this, DeviceEmulatorActivity::class.java))
+    }
+
+    private fun openInBrowser() {
+        if (hasUnsavedChanges) saveCurrentFile()
+
+        val htmlFile = lastActiveHtmlFile
+        if (htmlFile == null || !htmlFile.exists()) {
+            Toast.makeText(this, "Open an HTML file first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Serve the whole project folder so ../css/style.css style links work
+        val project = ProjectManager.getCurrentProject()
+        val root = if (project != null &&
+            htmlFile.canonicalPath.startsWith(project.canonicalPath + File.separator)
+        ) project else htmlFile.parentFile
+
+        if (root == null) {
+            Toast.makeText(this, "Could not find the project folder", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val port = LocalServer.start(root)
+        if (port < 0) {
+            Toast.makeText(this, "Could not start the server", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val rel = htmlFile.canonicalFile.relativeTo(root.canonicalFile).path
+            .replace(File.separatorChar, '/')
+        val url = "http://127.0.0.1:$port/" + Uri.encode(rel, "/")
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
     private fun showPreview() {
