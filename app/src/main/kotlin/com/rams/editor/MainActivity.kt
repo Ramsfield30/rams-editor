@@ -668,7 +668,21 @@ class MainActivity : AppCompatActivity() {
         val rel = htmlFile.canonicalFile.relativeTo(root.canonicalFile).path
             .replace(File.separatorChar, '/')
         val url = "http://127.0.0.1:$port/" + Uri.encode(rel, "/")
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        
+        val view = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val chosen = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
+            .getString("browser_package", null)
+        if (chosen != null) {
+            view.setPackage(chosen)
+            try {
+                startActivity(view)
+                return
+            } catch (e: Exception) {
+                Toast.makeText(this, "That browser isn't available, choose another", Toast.LENGTH_SHORT).show()
+                view.setPackage(null)
+            }
+        }
+        startActivity(Intent.createChooser(view, "Open with"))
     }
 
     private fun showPreview() {

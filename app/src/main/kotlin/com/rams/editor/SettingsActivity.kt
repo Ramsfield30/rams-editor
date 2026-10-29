@@ -2,6 +2,7 @@ package com.rams.editor
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.widget.EditText
@@ -150,6 +151,49 @@ class SettingsActivity : AppCompatActivity() {
                     prefs.edit().putString("run_action", runActionKeys[which]).apply()
                     showRunAction()
                     dialog.dismiss()
+                }
+                .show()
+        }
+
+        // Browser used by "Open in Browser"
+        val browserValue = findViewById<TextView>(R.id.browserValue)
+
+        fun showBrowser() {
+            val pkg = prefs.getString("browser_package", null)
+            browserValue.text = if (pkg == null) {
+                "Ask every time"
+            } else {
+                try {
+                    packageManager.getApplicationLabel(
+                        packageManager.getApplicationInfo(pkg, 0)
+                    ).toString()
+                } catch (e: Exception) {
+                    "Ask every time"
+                }
+            }
+        }
+        showBrowser()
+
+        findViewById<android.widget.LinearLayout>(R.id.browserRow).setOnClickListener {
+            val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+            val browsers = packageManager
+                .queryIntentActivities(probe, PackageManager.MATCH_ALL)
+                .distinctBy { it.activityInfo.packageName }
+
+            val labels = arrayOf("Ask every time") +
+                browsers.map { it.loadLabel(packageManager).toString() }
+            val packages = arrayOf<String?>(null) +
+                browsers.map { it.activityInfo.packageName }
+
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Open in Browser with")
+                .setItems(labels) { _, which ->
+                    val editor = prefs.edit()
+                    val chosen = packages[which]
+                    if (chosen == null) editor.remove("browser_package")
+                    else editor.putString("browser_package", chosen)
+                    editor.apply()
+                    showBrowser()
                 }
                 .show()
         }
