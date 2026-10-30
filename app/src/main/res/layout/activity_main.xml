@@ -211,19 +211,67 @@
             android:background="#333333"/>
 
         <!-- Snippet row 2 — fixed symbols -->
-        <HorizontalScrollView
+        <LinearLayout
+            android:id="@+id/snippetBar2"
             android:layout_width="match_parent"
             android:layout_height="36dp"
-            android:background="#1E1E1E"
-            android:scrollbars="none">
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:id="@+id/snippetRow2"
-                android:layout_width="wrap_content"
+            <HorizontalScrollView
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"/>
+                android:layout_weight="1"
+                android:background="#1E1E1E"
+                android:scrollbars="none">
 
-        </HorizontalScrollView>
+                <LinearLayout
+                    android:id="@+id/snippetRow2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"/>
+
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/keyLeft"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="◀"
+                android:textColor="#CCCCCC"
+                android:textSize="13sp"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
+                android:id="@+id/keyRight"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="▶"
+                android:textColor="#CCCCCC"
+                android:textSize="13sp"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
+                android:id="@+id/keyUp"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="▲"
+                android:textColor="#CCCCCC"
+                android:textSize="13sp"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
+                android:id="@+id/keyDown"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="▼"
+                android:textColor="#CCCCCC"
+                android:textSize="13sp"
+                android:background="?android:attr/selectableItemBackground"/>
+        </LinearLayout>
 
     </LinearLayout>
 

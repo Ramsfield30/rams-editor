@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.text.style.ForegroundColorSpan
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.webkit.ConsoleMessage
 import android.widget.Button
@@ -93,6 +94,8 @@ class MainActivity : AppCompatActivity() {
                 codeEditor.text?.length ?: 0
             ))
         }
+
+        setupCursorKeys()
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -572,6 +575,53 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100) showPreview()
     }
 
+    private fun setupCursorKeys() {
+        fun move(dx: Int, dy: Int) {
+            val text = codeEditor.text ?: return
+            val pos = codeEditor.selectionStart.coerceAtLeast(0)
+            if (dy == 0) {
+                codeEditor.setSelection((pos + dx).coerceIn(0, text.length))
+                return
+            }
+            // Up / down follow the lines as you see them, even with word wrap on
+            val layout = codeEditor.layout ?: return
+            val line = layout.getLineForOffset(pos)
+            val x = layout.getPrimaryHorizontal(pos)
+            val target = (line + dy).coerceIn(0, layout.lineCount - 1)
+            codeEditor.setSelection(layout.getOffsetForHorizontal(target, x))
+        }
+
+        bindRepeat(findViewById(R.id.keyLeft)) { move(-1, 0) }
+        bindRepeat(findViewById(R.id.keyRight)) { move(1, 0) }
+        bindRepeat(findViewById(R.id.keyUp)) { move(0, -1) }
+        bindRepeat(findViewById(R.id.keyDown)) { move(0, 1) }
+    }
+
+    // One tap moves once. Holding the key repeats it.
+    private fun bindRepeat(view: View, action: () -> Unit) {
+        val handler = Handler(Looper.getMainLooper())
+        val repeat = object : Runnable {
+            override fun run() {
+                action()
+                handler.postDelayed(this, 70)
+            }
+        }
+        view.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.isPressed = true
+                    action()
+                    handler.postDelayed(repeat, 400)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    handler.removeCallbacks(repeat)
+                }
+            }
+            true
+        }
+    }
+
     private fun setupConsole() {
         val panel = findViewById<android.widget.LinearLayout>(R.id.consolePanel)
         val text = findViewById<TextView>(R.id.consoleText)
@@ -702,7 +752,7 @@ class MainActivity : AppCompatActivity() {
         val snippetVisibility =
             if (prefs.getBoolean("snippet_bar", true)) View.VISIBLE else View.GONE
         (snippetRow1.parent as View).visibility = snippetVisibility
-        (snippetRow2.parent as View).visibility = snippetVisibility
+        findViewById<View>(R.id.snippetBar2).visibility = snippetVisibility
 
         floatingPreview?.setSizePercent(prefs.getInt("preview_size", 50).coerceIn(25, 75))
 
