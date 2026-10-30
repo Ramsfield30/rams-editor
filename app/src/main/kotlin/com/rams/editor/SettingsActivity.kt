@@ -136,14 +136,14 @@ class SettingsActivity : AppCompatActivity() {
         val runActionValue = findViewById<TextView>(R.id.runActionValue)
 
         fun showRunAction() {
-            val key = prefs.getString("run_action", "fullscreen")
+            val key = prefs.getString("run_action", "menu")
             runActionValue.text = runActionLabels[runActionKeys.indexOf(key).coerceAtLeast(0)]
         }
         showRunAction()
 
         findViewById<android.widget.LinearLayout>(R.id.runActionRow).setOnClickListener {
             val current = runActionKeys
-                .indexOf(prefs.getString("run_action", "fullscreen"))
+                .indexOf(prefs.getString("run_action", "menu"))
                 .coerceAtLeast(0)
             androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Run button action")

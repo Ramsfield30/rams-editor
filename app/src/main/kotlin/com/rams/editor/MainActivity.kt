@@ -611,7 +611,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun runPreview() {
         val action = getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
-            .getString("run_action", "fullscreen")
+            .getString("run_action", "menu")
         when (action) {
             "live" -> checkOverlayPermission()
             "emulator" -> openDeviceEmulator()
@@ -707,7 +707,7 @@ class MainActivity : AppCompatActivity() {
         floatingPreview?.setSizePercent(prefs.getInt("preview_size", 50).coerceIn(25, 75))
 
         // ▾ menu next to ▶ only appears when chosen in Settings
-        val runAction = prefs.getString("run_action", "fullscreen")
+        val runAction = prefs.getString("run_action", "menu")
         findViewById<TextView>(R.id.btnRunMenu).visibility =
             if (runAction == "menu") View.VISIBLE else View.GONE
     }

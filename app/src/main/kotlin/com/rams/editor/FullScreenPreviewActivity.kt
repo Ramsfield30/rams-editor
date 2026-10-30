@@ -21,6 +21,8 @@ object PreviewHolder {
     var html: String = ""
     var baseUrl: String? = null
     var fileName: String = "index.html"
+    var projectRoot: String? = null
+    var relPath: String? = null
 }
 
 class FullScreenPreviewActivity : AppCompatActivity() {
@@ -70,7 +72,7 @@ class FullScreenPreviewActivity : AppCompatActivity() {
             menu.menu.add(0, 2, 1, "Close")
             menu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> Toast.makeText(this, "Coming soon", Toast.LENGTH_SHORT).show()
+                    1 -> BrowserLauncher.openPage(this, PreviewHolder.projectRoot, PreviewHolder.relPath)
                     2 -> finish()
                 }
                 true
