@@ -250,7 +250,9 @@ class CodeEditor @JvmOverloads constructor(
         }
 
         // Current line highlight
-        val currentLineY = paddingTop + (currentLine * lineHeight)
+        val lay = layout
+        val row = lay?.getLineForOffset(selectionStart) ?: currentLine
+        val currentLineY = paddingTop + (lay?.getLineTop(row)?.toFloat() ?: (currentLine * lineHeight))
         canvas.drawRect(
             0f, currentLineY,
             width.toFloat(), currentLineY + lineHeight + 8f,
