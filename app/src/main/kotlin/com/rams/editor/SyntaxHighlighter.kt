@@ -7,20 +7,20 @@ import java.util.regex.Pattern
 
 object SyntaxHighlighter {
 
-    private val COLOR_HTML_TAG = Color.parseColor("#569CD6")
-    private val COLOR_HTML_ATTR = Color.parseColor("#9CDCFE")
-    private val COLOR_STRING = Color.parseColor("#CE9178")
-    private val COLOR_COMMENT = Color.parseColor("#6A9955")
-    private val COLOR_DOCTYPE = Color.parseColor("#808080")
-    private val COLOR_CSS_SELECTOR = Color.parseColor("#D7BA7D")
-    private val COLOR_CSS_PROPERTY = Color.parseColor("#9CDCFE")
-    private val COLOR_CSS_VALUE = Color.parseColor("#CE9178")
-    private val COLOR_CSS_UNIT = Color.parseColor("#B5CEA8")
-    private val COLOR_JS_KEYWORD = Color.parseColor("#C586C0")
-    private val COLOR_JS_STRING = Color.parseColor("#CE9178")
-    private val COLOR_JS_NUMBER = Color.parseColor("#B5CEA8")
-    private val COLOR_JS_FUNCTION = Color.parseColor("#DCDCAA")
-    private val COLOR_JS_COMMENT = Color.parseColor("#6A9955")
+    private val COLOR_HTML_TAG = Color.parseColor("#E06C75")
+    private val COLOR_HTML_ATTR = Color.parseColor("#D19A66")
+    private val COLOR_STRING = Color.parseColor("#98C379")
+    private val COLOR_COMMENT = Color.parseColor("#7F848E")
+    private val COLOR_DOCTYPE = Color.parseColor("#7F848E")
+    private val COLOR_CSS_SELECTOR = Color.parseColor("#C678DD")
+    private val COLOR_CSS_PROPERTY = Color.parseColor("#61AFEF")
+    private val COLOR_CSS_VALUE = Color.parseColor("#56B6C2")
+    private val COLOR_CSS_UNIT = Color.parseColor("#D19A66")
+    private val COLOR_JS_KEYWORD = Color.parseColor("#C678DD")
+    private val COLOR_JS_STRING = Color.parseColor("#98C379")
+    private val COLOR_JS_NUMBER = Color.parseColor("#D19A66")
+    private val COLOR_JS_FUNCTION = Color.parseColor("#61AFEF")
+    private val COLOR_JS_COMMENT = Color.parseColor("#7F848E")
 
     private val JS_KEYWORDS = setOf(
         "var", "let", "const", "function", "return", "if", "else",

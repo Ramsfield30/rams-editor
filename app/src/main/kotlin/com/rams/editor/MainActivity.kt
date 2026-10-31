@@ -136,6 +136,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.btnNewFile).setOnClickListener {
+            if (ProjectManager.getCurrentProject() == null) {
+                Toast.makeText(this, "Create or open a project first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             ProjectManager.createNewFile(this) { file ->
                 openFileInTab(file)
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
@@ -147,12 +151,13 @@ class MainActivity : AppCompatActivity() {
             ProjectManager.createNewProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
                 fileTreeAdapter.updateNodes(nodes)
+                if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+                    openTabs[currentTabIndex].writeText(codeEditor.getCode())
                 openTabs.clear()
                 tabContainer.removeAllViews()
                 currentTabIndex = -1
                 lastActiveHtmlFile = null
-                fileName.text = "untitled.html"
-                codeEditor.setCode(getStarterCode())
+                openProjectMainFile()
                 drawerLayout.closeDrawer(Gravity.START)
             }
         }
@@ -161,12 +166,13 @@ class MainActivity : AppCompatActivity() {
             ProjectManager.openProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
                 fileTreeAdapter.updateNodes(nodes)
+                if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+                    openTabs[currentTabIndex].writeText(codeEditor.getCode())
                 openTabs.clear()
                 tabContainer.removeAllViews()
                 currentTabIndex = -1
                 lastActiveHtmlFile = null
-                fileName.text = "untitled.html"
-                codeEditor.setCode(getStarterCode())
+                openProjectMainFile()
                 drawerLayout.closeDrawer(Gravity.START)
             }
         }
@@ -213,7 +219,7 @@ class MainActivity : AppCompatActivity() {
         val hasSession = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
             .getString("last_project", null) != null
         if (hasSession) restoreLastSession()
-        if (openTabs.isEmpty()) codeEditor.setCode(getStarterCode())
+        if (openTabs.isEmpty()) openProjectMainFile()
     }
 
     private fun schedulePreviewUpdate(code: String) {
@@ -429,6 +435,7 @@ class MainActivity : AppCompatActivity() {
         currentTabIndex = openTabs.size - 1
         addTabView(file, currentTabIndex)
         codeEditor.setCode(file.readText())
+        codeEditor.isEnabled = true
         fileName.text = file.name
 
         // Added exactly as requested
@@ -465,6 +472,7 @@ class MainActivity : AppCompatActivity() {
         currentTabIndex = index
         val file = openTabs[index]
         codeEditor.setCode(file.readText())
+        codeEditor.isEnabled = true
         fileName.text = file.name
 
         // Added exactly as requested
@@ -485,14 +493,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showEmptyState() {
+        currentTabIndex = -1
+        codeEditor.setCode("")
+        codeEditor.hint = if (ProjectManager.getCurrentProject() == null)
+            "Create or open a project from the ☰ menu to start coding"
+        else
+            "Open a file from the explorer"
+        codeEditor.isEnabled = false
+        fileName.text = ProjectManager.getCurrentProject()?.name ?: "No project"
+        hasUnsavedChanges = false
+    }
+
+    private fun openProjectMainFile() {
+        val dir = ProjectManager.getCurrentProject()
+        val main = dir?.let { d ->
+            File(d, "index.html").takeIf { it.exists() }
+                ?: d.listFiles()?.filter { it.isFile }?.minByOrNull { it.name }
+        }
+        if (main != null) openFileInTab(main) else showEmptyState()
+    }
+
     private fun closeTab(index: Int) {
         if (index < 0 || index >= openTabs.size) return
         openTabs.removeAt(index)
         tabContainer.removeViewAt(index)
         if (openTabs.isEmpty()) {
-            currentTabIndex = -1
-            fileName.text = "untitled.html"
-            codeEditor.setCode(getStarterCode())
+            showEmptyState()
         } else {
             val newIndex = if (index >= openTabs.size) openTabs.size - 1 else index
             switchToTab(newIndex)
@@ -545,9 +572,7 @@ class MainActivity : AppCompatActivity() {
             fileName.text = openTabs[currentTabIndex].name
             hasUnsavedChanges = false
         } else {
-            FileManager.saveFile(this, codeEditor.getCode())
-            fileName.text = FileManager.getCurrentFileName()
-            hasUnsavedChanges = false
+            Toast.makeText(this, "Open a file inside a project first", Toast.LENGTH_SHORT).show()
         }
     }
 

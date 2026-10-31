@@ -99,7 +99,7 @@ class CodeEditor @JvmOverloads constructor(
 
     init {
         setPadding(lineNumberWidth.toInt() + 16, 16, 16, 16)
-        setTextColor(Color.parseColor("#D4D4D4"))
+        setTextColor(Color.parseColor("#ABB2BF"))
         setBackgroundColor(Color.parseColor("#1E1E1E"))
         textSize = 14f
         typeface = android.graphics.Typeface.MONOSPACE
