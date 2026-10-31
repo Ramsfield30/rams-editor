@@ -261,20 +261,29 @@ class CodeEditor @JvmOverloads constructor(
 
         if (showLineNumbers) {
             // Line numbers
-            for (i in lines.indices) {
-                val lineNumber = (i + 1).toString()
-                val y = paddingTop + (i * lineHeight) + textSize * 1.2f
-                lineNumberPaint.color = if (i == currentLine)
-                    Color.parseColor("#C6C6C6")
-                else
-                    Color.parseColor("#858585")
-                val textWidth = lineNumberPaint.measureText(lineNumber)
-                canvas.drawText(
-                    lineNumber,
-                    lineNumberWidth - textWidth - 12f,
-                    y,
-                    lineNumberPaint
-                )
+            val lay = layout
+            if (lay != null) {
+                val clip = canvas.clipBounds
+                var offset = 0
+                for (i in lines.indices) {
+                    val top = paddingTop + lay.getLineTop(lay.getLineForOffset(offset))
+                    if (top > clip.bottom) break
+                    if (top + lineHeight >= clip.top) {
+                        val lineNumber = (i + 1).toString()
+                        lineNumberPaint.color = if (i == currentLine)
+                            Color.parseColor("#C6C6C6")
+                        else
+                            Color.parseColor("#858585")
+                        val textWidth = lineNumberPaint.measureText(lineNumber)
+                        canvas.drawText(
+                            lineNumber,
+                            lineNumberWidth - textWidth - 12f,
+                            top + textSize * 1.2f,
+                            lineNumberPaint
+                        )
+                    }
+                    offset += lines[i].length + 1
+                }
             }
         }
         super.onDraw(canvas)
