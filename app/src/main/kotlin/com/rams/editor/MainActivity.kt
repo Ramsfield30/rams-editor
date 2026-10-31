@@ -575,6 +575,22 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100) showPreview()
     }
 
+    private fun showGoToLine() {
+        val input = android.widget.EditText(this).apply {
+            hint = "Line number"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Go to line (1-${codeEditor.lineCount()})")
+            .setView(input)
+            .setPositiveButton("Go") { _, _ ->
+                val n = input.text.toString().toIntOrNull()
+                if (n != null) codeEditor.goToLine(n)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun setupCursorKeys() {
         fun move(dx: Int, dy: Int) {
             val text = codeEditor.text ?: return
@@ -595,6 +611,7 @@ class MainActivity : AppCompatActivity() {
         bindRepeat(findViewById(R.id.keyRight)) { move(1, 0) }
         bindRepeat(findViewById(R.id.keyUp)) { move(0, -1) }
         bindRepeat(findViewById(R.id.keyDown)) { move(0, 1) }
+        findViewById<TextView>(R.id.keyGoto).setOnClickListener { showGoToLine() }
     }
 
     // One tap moves once. Holding the key repeats it.

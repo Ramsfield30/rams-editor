@@ -58,6 +58,24 @@ class CodeEditor @JvmOverloads constructor(
         setHorizontallyScrolling(!wrap)
     }
 
+    fun lineCount(): Int = (text?.count { it == '\n' } ?: 0) + 1
+
+    fun goToLine(line: Int) {
+        val t = text ?: return
+        val target = line.coerceIn(1, lineCount())
+        var offset = 0
+        var current = 1
+        while (current < target) {
+            offset = t.indexOf('\n', offset) + 1
+            current++
+        }
+        requestFocus()
+        setSelection(offset)
+        val l = layout ?: return
+        val y = l.getLineTop(l.getLineForOffset(offset))
+        (parent as? android.widget.ScrollView)?.smoothScrollTo(0, y)
+    }
+
     // Self-closing tags that should NOT get closing tag
     private val selfClosingTags = setOf(
         "br", "hr", "img", "input", "meta", "link",
