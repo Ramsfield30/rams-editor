@@ -359,16 +359,12 @@ class MainActivity : AppCompatActivity() {
                 projectName.text = projectDir.name.uppercase()
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
 
-                // Restore all tabs
+                // Restore tabs (only the active one is loaded)
                 if (tabPaths != null) {
-                    tabPaths.split("|").forEach { path ->
-                        val file = File(path)
-                        if (file.exists()) openFileInTab(file)
-                    }
-                    // Switch to last active tab
-                    if (activeTab >= 0 && activeTab < openTabs.size) {
-                        switchToTab(activeTab)
-                    }
+                    addTabsLazily(
+                        tabPaths.split("|").map { File(it) }.filter { it.exists() },
+                        activeTab
+                    )
                 }
             }
         }
@@ -458,11 +454,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
         if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+            if (hasUnsavedChanges) openTabs[currentTabIndex].writeText(codeEditor.getCode())
         }
         openTabs.add(file)
         currentTabIndex = openTabs.size - 1
         addTabView(file, currentTabIndex)
+        SyntaxHighlighter.setFileName(file.name)
         codeEditor.setCode(file.readText())
         codeEditor.isEnabled = true
         fileName.text = file.name
@@ -496,10 +493,11 @@ class MainActivity : AppCompatActivity() {
     private fun switchToTab(index: Int) {
         if (index < 0 || index >= openTabs.size) return
         if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+            if (hasUnsavedChanges) openTabs[currentTabIndex].writeText(codeEditor.getCode())
         }
         currentTabIndex = index
         val file = openTabs[index]
+        SyntaxHighlighter.setFileName(file.name)
         codeEditor.setCode(file.readText())
         codeEditor.isEnabled = true
         fileName.text = file.name
@@ -554,6 +552,20 @@ class MainActivity : AppCompatActivity() {
             .apply()
     }
 
+    private fun addTabsLazily(files: List<File>, active: Int) {
+        files.forEach { f ->
+            if (!openTabs.contains(f)) {
+                openTabs.add(f)
+                addTabView(f, openTabs.size - 1)
+                if (lastActiveHtmlFile == null && f.name.endsWith(".html"))
+                    lastActiveHtmlFile = f
+            }
+        }
+        currentTabIndex = -1
+        if (openTabs.isNotEmpty())
+            switchToTab(if (active in openTabs.indices) active else 0)
+    }
+
     private fun restoreProjectTabs() {
         val dir = ProjectManager.getCurrentProject()
         if (dir == null) {
@@ -568,9 +580,7 @@ class MainActivity : AppCompatActivity() {
             openProjectMainFile()
             return
         }
-        files.forEach { openFileInTab(it) }
-        val active = prefs.getInt("active:" + dir.absolutePath, 0)
-        if (active in openTabs.indices) switchToTab(active)
+        addTabsLazily(files, prefs.getInt("active:" + dir.absolutePath, 0))
     }
 
     private fun closeTab(index: Int) {
@@ -918,7 +928,7 @@ class MainActivity : AppCompatActivity() {
         applySettings()
     }
 
-    override fun onPause() {
+        override fun onPause() {
         super.onPause()
         if (hasUnsavedChanges) saveCurrentFile()
         saveSession()

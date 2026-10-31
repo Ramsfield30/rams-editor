@@ -35,6 +35,7 @@ object SyntaxHighlighter {
         Pattern.compile("<style[^>]*>([\\s\\S]*?)</style>", Pattern.CASE_INSENSITIVE)
     private val SCRIPT_BLOCK =
         Pattern.compile("<script[^>]*>([\\s\\S]*?)</script>", Pattern.CASE_INSENSITIVE)
+    private val JS_HINT = Regex("\\b(?:function|const|let)\\s|=>")
 
     private enum class Mode { AUTO, HTML, CSS, JS, NONE }
 
@@ -57,6 +58,7 @@ object SyntaxHighlighter {
         val m = if (mode == Mode.AUTO) {
             when {
                 src.contains("<html") || src.contains("<!DOCTYPE") -> Mode.HTML
+                JS_HINT.containsMatchIn(src) -> Mode.JS
                 src.contains("{") && src.contains(":") -> Mode.CSS
                 else -> Mode.JS
             }
