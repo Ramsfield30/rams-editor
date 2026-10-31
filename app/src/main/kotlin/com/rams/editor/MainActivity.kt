@@ -766,6 +766,10 @@ class MainActivity : AppCompatActivity() {
         codeEditor.setWordWrap(prefs.getBoolean("word_wrap", false))
         codeEditor.showLineNumbers = prefs.getBoolean("line_numbers", true)
         codeEditor.autoCloseEnabled = prefs.getBoolean("auto_close", true)
+        
+        codeEditor.tabSize = prefs.getInt("tab_size", 4)
+        codeEditor.showIndentGuides = prefs.getBoolean("indent_guides", true)
+        codeEditor.showActiveLine = prefs.getBoolean("active_line", true)
 
         snippetBar.tabSize = prefs.getInt("tab_size", 4)
         val snippetVisibility =

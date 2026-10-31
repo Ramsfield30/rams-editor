@@ -48,6 +48,20 @@ class CodeEditor @JvmOverloads constructor(
 
     var autoCloseEnabled = true
 
+    var tabSize = 4
+    private fun indentUnit(): String = " ".repeat(tabSize)
+
+    var showIndentGuides = true
+        set(value) { field = value; invalidate() }
+
+    var showActiveLine = true
+        set(value) { field = value; invalidate() }
+
+    private val indentGuidePaint = Paint().apply {
+        color = Color.parseColor("#404040")
+        strokeWidth = 2f
+    }
+
     fun setFontSizeSp(sp: Int) {
         textSize = sp.toFloat()
         lineNumberPaint.textSize = textSize * 0.95f
@@ -122,21 +136,27 @@ class CodeEditor @JvmOverloads constructor(
                                 )
 
                             val nextIsClosingTag = textAfter.trimStart().startsWith("</")
+                            
+                            val opensBracket = trimmed.endsWith("{") ||
+                                trimmed.endsWith("[") || trimmed.endsWith("(")
+                            val nextIsClosingBracket =
+                                textAfter.isNotEmpty() && textAfter[0] in "}])"
 
                             when {
-                                endsWithOpenTag && nextIsClosingTag -> {
+                                (endsWithOpenTag && nextIsClosingTag) ||
+                                    (opensBracket && nextIsClosingBracket) -> {
                                     // Cursor between <head> and </head>
                                     isAutoCompleting = true
                                     post {
                                         val pos = selectionStart
-                                        val innerIndent = indent + "    "
+                                        val innerIndent = indent + indentUnit()
                                         text?.insert(pos, innerIndent + "\n" + indent)
                                         setSelection(pos + innerIndent.length)
                                         isAutoCompleting = false
                                     }
                                 }
-                                indent.isNotEmpty() || endsWithOpenTag -> {
-                                    val extraIndent = if (endsWithOpenTag) "    " else ""
+                                indent.isNotEmpty() || endsWithOpenTag || opensBracket -> {
+                                    val extraIndent = if (endsWithOpenTag || opensBracket) indentUnit() else ""
                                     isAutoCompleting = true
                                     post {
                                         val pos = selectionStart
@@ -253,11 +273,13 @@ class CodeEditor @JvmOverloads constructor(
         val lay = layout
         val row = lay?.getLineForOffset(selectionStart) ?: currentLine
         val currentLineY = paddingTop + (lay?.getLineTop(row)?.toFloat() ?: (currentLine * lineHeight))
-        canvas.drawRect(
-            0f, currentLineY,
-            width.toFloat(), currentLineY + lineHeight + 8f,
-            currentLinePaint
-        )
+        if (showActiveLine) {
+            canvas.drawRect(
+                0f, currentLineY,
+                width.toFloat(), currentLineY + lineHeight + 8f,
+                currentLinePaint
+            )
+        }
 
         if (showLineNumbers) {
             // Line numbers
@@ -286,6 +308,32 @@ class CodeEditor @JvmOverloads constructor(
                 }
             }
         }
+        
+        if (showIndentGuides) {
+            val lay = layout
+            if (lay != null) {
+                val clip = canvas.clipBounds
+                val charW = paint.measureText(" ")
+                var offset = 0
+                for (line in lines) {
+                    val top = paddingTop + lay.getLineTop(lay.getLineForOffset(offset))
+                    if (top > clip.bottom) break
+                    val bottom = paddingTop +
+                        lay.getLineBottom(lay.getLineForOffset(offset + line.length))
+                    if (bottom >= clip.top) {
+                        val spaces = line.takeWhile { it == ' ' }.length
+                        var col = 0
+                        while (col < spaces) {
+                            val x = paddingLeft + col * charW
+                            canvas.drawLine(x, top, x, bottom, indentGuidePaint)
+                            col += tabSize
+                        }
+                    }
+                    offset += line.length + 1
+                }
+            }
+        }
+        
         super.onDraw(canvas)
     }
 

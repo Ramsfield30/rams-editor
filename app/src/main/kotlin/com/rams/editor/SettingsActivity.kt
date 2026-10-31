@@ -74,6 +74,20 @@ class SettingsActivity : AppCompatActivity() {
             prefs.edit().putBoolean("line_numbers", checked).apply()
         }
 
+        // Indent guides
+        val indentGuideSwitch = findViewById<Switch>(R.id.indentGuideSwitch)
+        indentGuideSwitch.isChecked = prefs.getBoolean("indent_guides", true)
+        indentGuideSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("indent_guides", checked).apply()
+        }
+
+        // Active line highlight
+        val activeLineSwitch = findViewById<Switch>(R.id.activeLineSwitch)
+        activeLineSwitch.isChecked = prefs.getBoolean("active_line", true)
+        activeLineSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("active_line", checked).apply()
+        }
+
         // Auto save
         val autoSaveSwitch = findViewById<Switch>(R.id.autoSaveSwitch)
         autoSaveSwitch.isChecked = prefs.getBoolean("auto_save", true)
