@@ -148,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.btnNewFolder).setOnClickListener {
+            saveProjectTabs()
             ProjectManager.createNewProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
                 fileTreeAdapter.updateNodes(nodes)
@@ -157,12 +158,13 @@ class MainActivity : AppCompatActivity() {
                 tabContainer.removeAllViews()
                 currentTabIndex = -1
                 lastActiveHtmlFile = null
-                openProjectMainFile()
+                restoreProjectTabs()
                 drawerLayout.closeDrawer(Gravity.START)
             }
         }
 
         findViewById<TextView>(R.id.btnOpenProject).setOnClickListener {
+            saveProjectTabs()
             ProjectManager.openProject(this) { name, nodes ->
                 projectName.text = name.uppercase()
                 fileTreeAdapter.updateNodes(nodes)
@@ -172,7 +174,7 @@ class MainActivity : AppCompatActivity() {
                 tabContainer.removeAllViews()
                 currentTabIndex = -1
                 lastActiveHtmlFile = null
-                openProjectMainFile()
+                restoreProjectTabs()
                 drawerLayout.closeDrawer(Gravity.START)
             }
         }
@@ -220,6 +222,27 @@ class MainActivity : AppCompatActivity() {
             .getString("last_project", null) != null
         if (hasSession) restoreLastSession()
         if (openTabs.isEmpty()) openProjectMainFile()
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (drawerLayout.isDrawerOpen(Gravity.START)) {
+                        drawerLayout.closeDrawer(Gravity.START)
+                        return
+                    }
+                    android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Leave Rams Editor?")
+                        .setMessage("Are you sure you want to leave Rams Editor?")
+                        .setPositiveButton("Leave") { _, _ ->
+                            if (hasUnsavedChanges && currentTabIndex >= 0) saveCurrentFile()
+                            finish()
+                        }
+                        .setNegativeButton("Stay", null)
+                        .show()
+                }
+            }
+        )
     }
 
     private fun schedulePreviewUpdate(code: String) {
@@ -512,6 +535,36 @@ class MainActivity : AppCompatActivity() {
                 ?: d.listFiles()?.filter { it.isFile }?.minByOrNull { it.name }
         }
         if (main != null) openFileInTab(main) else showEmptyState()
+    }
+
+    private fun saveProjectTabs() {
+        val dir = ProjectManager.getCurrentProject() ?: return
+        if (currentTabIndex >= 0 && openTabs.isNotEmpty())
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+        getSharedPreferences("rams_project_tabs", Context.MODE_PRIVATE).edit()
+            .putString("tabs:" + dir.absolutePath,
+                openTabs.joinToString("|") { it.absolutePath })
+            .putInt("active:" + dir.absolutePath, currentTabIndex)
+            .apply()
+    }
+
+    private fun restoreProjectTabs() {
+        val dir = ProjectManager.getCurrentProject()
+        if (dir == null) {
+            showEmptyState()
+            return
+        }
+        val prefs = getSharedPreferences("rams_project_tabs", Context.MODE_PRIVATE)
+        val files = prefs.getString("tabs:" + dir.absolutePath, null)
+            ?.split("|")?.map { File(it) }?.filter { it.exists() }
+            .orEmpty()
+        if (files.isEmpty()) {
+            openProjectMainFile()
+            return
+        }
+        files.forEach { openFileInTab(it) }
+        val active = prefs.getInt("active:" + dir.absolutePath, 0)
+        if (active in openTabs.indices) switchToTab(active)
     }
 
     private fun closeTab(index: Int) {
