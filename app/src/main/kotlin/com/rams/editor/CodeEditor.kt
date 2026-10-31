@@ -51,6 +51,18 @@ class CodeEditor @JvmOverloads constructor(
     var tabSize = 4
     private fun indentUnit(): String = " ".repeat(tabSize)
 
+    private var cachedLines: List<String> = listOf("")
+
+    private val highlightRunnable = Runnable {
+        val t = text ?: return@Runnable
+        SyntaxHighlighter.highlight(t)
+    }
+
+    private fun scheduleHighlight() {
+        removeCallbacks(highlightRunnable)
+        postDelayed(highlightRunnable, 120)
+    }
+
     var showIndentGuides = true
         set(value) { field = value; invalidate() }
 
@@ -175,7 +187,7 @@ class CodeEditor @JvmOverloads constructor(
 
     init {
         setPadding(lineNumberWidth.toInt() + 16, 16, 16, 16)
-        setTextColor(Color.parseColor("#ABB2BF"))
+        setTextColor(Color.parseColor("#D8D8D8"))
         setBackgroundColor(Color.parseColor("#1E1E1E"))
         textSize = 14f
         typeface = android.graphics.Typeface.MONOSPACE
@@ -303,12 +315,11 @@ class CodeEditor @JvmOverloads constructor(
 
             override fun afterTextChanged(s: Editable?) {
                 if (s == null) return
-                // Tell the preview and auto-save first, so coloring can't delay them
-                onTextChangedListener?.invoke(s.toString())
+                val str = s.toString()
+                cachedLines = str.split("\n")
+                onTextChangedListener?.invoke(str)
                 if (isAutoCompleting) return
-                removeTextChangedListener(this)
-                SyntaxHighlighter.highlight(s)
-                addTextChangedListener(this)
+                scheduleHighlight()
                 updateCurrentLine()
             }
         })
@@ -324,8 +335,7 @@ class CodeEditor @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        val text = text.toString()
-        val lines = text.split("\n")
+        val lines = cachedLines
         val lineHeight = lineHeight.toFloat()
         val paddingTop = paddingTop.toFloat()
 
