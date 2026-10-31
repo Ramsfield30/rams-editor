@@ -108,6 +108,70 @@
 
         </HorizontalScrollView>
 
+        <LinearLayout
+            android:id="@+id/findPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#252526"
+            android:padding="6dp"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/findInput"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="#1E1E1E"
+                android:hint="Find"
+                android:inputType="text"
+                android:imeOptions="actionSearch"
+                android:singleLine="true"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:textColor="#D4D4D4"
+                android:textColorHint="#858585"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/findCount"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="64dp"
+                android:gravity="center"
+                android:text="0/0"
+                android:textColor="#CCCCCC"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/findPrev"
+                android:layout_width="36dp"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:text="▲"
+                android:textColor="#CCCCCC"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
+                android:id="@+id/findNext"
+                android:layout_width="36dp"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:text="▼"
+                android:textColor="#CCCCCC"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
+                android:id="@+id/findClose"
+                android:layout_width="36dp"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:text="✕"
+                android:textColor="#CCCCCC"
+                android:background="?android:attr/selectableItemBackground"/>
+        </LinearLayout>
+
         <!-- Code editor -->
         <ScrollView
             android:id="@+id/scrollView"
@@ -231,6 +295,16 @@
                     android:orientation="horizontal"/>
 
             </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/keyFind"
+                android:layout_width="44dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="Find"
+                android:textColor="#CCCCCC"
+                android:textSize="13sp"
+                android:background="?android:attr/selectableItemBackground"/>
 
             <TextView
                 android:id="@+id/keyGoto"

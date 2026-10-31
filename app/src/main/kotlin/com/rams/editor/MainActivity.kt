@@ -216,6 +216,8 @@ class MainActivity : AppCompatActivity() {
                 schedulePreviewUpdate(code)
             }
             scheduleAutoSave(code)
+            if (findViewById<View>(R.id.findPanel).visibility == View.VISIBLE)
+                codeEditor.post { codeEditor.refreshMatches() }
         }
 
         val hasSession = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
@@ -227,6 +229,10 @@ class MainActivity : AppCompatActivity() {
             this,
             object : androidx.activity.OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
+                    if (findViewById<View>(R.id.findPanel).visibility == View.VISIBLE) {
+                        findViewById<View>(R.id.findClose).performClick()
+                        return
+                    }
                     if (drawerLayout.isDrawerOpen(Gravity.START)) {
                         drawerLayout.closeDrawer(Gravity.START)
                         return
@@ -655,6 +661,49 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100) showPreview()
     }
 
+    private fun setupFindPanel() {
+        val panel = findViewById<View>(R.id.findPanel)
+        val input = findViewById<android.widget.EditText>(R.id.findInput)
+        val count = findViewById<TextView>(R.id.findCount)
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE)
+            as android.view.inputmethod.InputMethodManager
+
+        codeEditor.onFindResult = { cur, total ->
+            count.text = when {
+                input.text.isNullOrEmpty() -> "0/0"
+                total == 0 -> "No results"
+                else -> "$cur/$total"
+            }
+        }
+        input.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                codeEditor.find(s?.toString() ?: "")
+            }
+        })
+        input.setOnEditorActionListener { _, _, _ -> codeEditor.findNext(); true }
+        findViewById<TextView>(R.id.findNext).setOnClickListener { codeEditor.findNext() }
+        findViewById<TextView>(R.id.findPrev).setOnClickListener { codeEditor.findPrev() }
+        findViewById<TextView>(R.id.findClose).setOnClickListener {
+            codeEditor.clearFind()
+            panel.visibility = View.GONE
+            imm.hideSoftInputFromWindow(input.windowToken, 0)
+        }
+        findViewById<TextView>(R.id.keyFind).setOnClickListener {
+            val s = codeEditor.selectionStart
+            val e = codeEditor.selectionEnd
+            if (e > s && e - s <= 100) {
+                val picked = codeEditor.text.toString().substring(s, e)
+                if (!picked.contains('\n')) input.setText(picked)
+            }
+            panel.visibility = View.VISIBLE
+            input.requestFocus()
+            input.setSelection(input.text.length)
+            imm.showSoftInput(input, 0)
+        }
+    }
+
     private fun showGoToLine() {
         val input = android.widget.EditText(this).apply {
             hint = "Line number"
@@ -692,6 +741,7 @@ class MainActivity : AppCompatActivity() {
         bindRepeat(findViewById(R.id.keyUp)) { move(0, -1) }
         bindRepeat(findViewById(R.id.keyDown)) { move(0, 1) }
         findViewById<TextView>(R.id.keyGoto).setOnClickListener { showGoToLine() }
+        setupFindPanel()
     }
 
     // One tap moves once. Holding the key repeats it.
@@ -890,8 +940,4 @@ class MainActivity : AppCompatActivity() {
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-    <h1>Welcome to Rams Editor!</h1>
-</body>
-</html>"""
-    }
-}
+    <h1

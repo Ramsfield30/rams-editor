@@ -72,6 +72,82 @@ class CodeEditor @JvmOverloads constructor(
         setHorizontallyScrolling(!wrap)
     }
 
+    // ---------- Find ----------
+    var onFindResult: ((Int, Int) -> Unit)? = null
+    private var findQuery = ""
+    private var matchStarts: List<Int> = emptyList()
+    private var matchIndex = -1
+    private val matchColor = Color.parseColor("#614D1A")
+    private val currentMatchColor = Color.parseColor("#A07A12")
+
+    private class MatchSpan(color: Int) : android.text.style.BackgroundColorSpan(color)
+
+    fun find(query: String) {
+        findQuery = query
+        refreshMatches(fromCursor = true)
+    }
+
+    fun refreshMatches(fromCursor: Boolean = false) {
+        val s = text?.toString() ?: return
+        val found = ArrayList<Int>()
+        if (findQuery.isNotEmpty()) {
+            var i = s.indexOf(findQuery, 0, ignoreCase = true)
+            while (i >= 0 && found.size < 5000) {
+                found.add(i)
+                i = s.indexOf(findQuery, i + findQuery.length, ignoreCase = true)
+            }
+        }
+        matchStarts = found
+        matchIndex = when {
+            found.isEmpty() -> -1
+            fromCursor -> found.indexOfFirst { it >= selectionStart }
+                .let { if (it < 0) 0 else it }
+            else -> matchIndex.coerceIn(0, found.size - 1)
+        }
+        paintMatches()
+        if (fromCursor && matchIndex >= 0) revealCurrentMatch()
+        onFindResult?.invoke(matchIndex + 1, found.size)
+    }
+
+    private fun paintMatches() {
+        val t = text ?: return
+        t.getSpans(0, t.length, MatchSpan::class.java).forEach { t.removeSpan(it) }
+        for ((n, start) in matchStarts.withIndex()) {
+            val color = if (n == matchIndex) currentMatchColor else matchColor
+            t.setSpan(
+                MatchSpan(color), start, start + findQuery.length,
+                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+    }
+
+    private fun revealCurrentMatch() {
+        val start = matchStarts[matchIndex]
+        setSelection(start, start + findQuery.length)
+        val l = layout ?: return
+        val y = l.getLineTop(l.getLineForOffset(start)) - lineHeight * 3
+        (parent as? android.widget.ScrollView)?.smoothScrollTo(0, y.coerceAtLeast(0))
+    }
+
+    fun findNext() = stepMatch(1)
+    fun findPrev() = stepMatch(-1)
+
+    private fun stepMatch(dir: Int) {
+        if (matchStarts.isEmpty()) return
+        matchIndex = (matchIndex + dir + matchStarts.size) % matchStarts.size
+        paintMatches()
+        revealCurrentMatch()
+        onFindResult?.invoke(matchIndex + 1, matchStarts.size)
+    }
+
+    fun clearFind() {
+        findQuery = ""
+        matchStarts = emptyList()
+        matchIndex = -1
+        paintMatches()
+        onFindResult?.invoke(0, 0)
+    }
+
     fun lineCount(): Int = (text?.count { it == '\n' } ?: 0) + 1
 
     fun goToLine(line: Int) {
