@@ -210,11 +210,10 @@ class MainActivity : AppCompatActivity() {
             scheduleAutoSave(code)
         }
 
-        codeEditor.setCode(getStarterCode())
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            restoreLastSession()
-        }, 300)
+        val hasSession = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+            .getString("last_project", null) != null
+        if (hasSession) restoreLastSession()
+        if (openTabs.isEmpty()) codeEditor.setCode(getStarterCode())
     }
 
     private fun schedulePreviewUpdate(code: String) {
@@ -233,7 +232,10 @@ class MainActivity : AppCompatActivity() {
 
         when {
             name.endsWith(".css") -> floatingPreview?.updateCss(code, name)
-            name.endsWith(".js") -> floatingPreview?.updateJs(code)
+            name.endsWith(".js") -> {
+                currentFile?.writeText(code)
+                floatingPreview?.update(getPreviewContent(), getBaseUrl())
+            }
             else -> floatingPreview?.update(inlineLinkedFiles(code), getBaseUrl())
         }
     }
