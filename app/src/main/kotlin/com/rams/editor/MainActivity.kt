@@ -58,6 +58,10 @@ class MainActivity : AppCompatActivity() {
     // Track last active HTML file for CSS/JS preview
     private var lastActiveHtmlFile: File? = null
 
+    // For asynchronous highlighting
+    private var loadToken = 0
+    private var loadingFile = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -447,35 +451,43 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun loadIntoEditor(file: File, onLoaded: () -> Unit) {
+        val token = ++loadToken
+        loadingFile = true
+        val code = file.readText()
+        Thread {
+            val colored = SyntaxHighlighter.build(code, file.name)
+            runOnUiThread {
+                if (token != loadToken || isFinishing) return@runOnUiThread
+                SyntaxHighlighter.setFileName(file.name)
+                codeEditor.setHighlightedCode(colored)
+                codeEditor.isEnabled = true
+                hasUnsavedChanges = false
+                fileName.text = file.name
+                loadingFile = false
+                onLoaded()
+            }
+        }.start()
+    }
+
     private fun openFileInTab(file: File) {
         val existingIndex = openTabs.indexOf(file)
         if (existingIndex != -1) {
             switchToTab(existingIndex)
             return
         }
-        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            if (hasUnsavedChanges) openTabs[currentTabIndex].writeText(codeEditor.getCode())
+        if (currentTabIndex in openTabs.indices && hasUnsavedChanges && !loadingFile) {
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
         }
+        hasUnsavedChanges = false
         openTabs.add(file)
         currentTabIndex = openTabs.size - 1
         addTabView(file, currentTabIndex)
-        SyntaxHighlighter.setFileName(file.name)
-        codeEditor.setCode(file.readText())
-        codeEditor.isEnabled = true
         fileName.text = file.name
-
-        // Added exactly as requested
-        // Update snippet bar mode based on file type
-        val ext = file.extension.lowercase()
-        snippetBar.setMode(ext)
-
-        // Track last active HTML file
-        if (file.name.endsWith(".html")) {
-            lastActiveHtmlFile = file
-        }
-
-        hasUnsavedChanges = false
+        snippetBar.setMode(file.extension.lowercase())
+        if (file.name.endsWith(".html")) lastActiveHtmlFile = file
         drawerLayout.closeDrawer(Gravity.START)
+        loadIntoEditor(file) { }
     }
 
     private fun addTabView(file: File, index: Int) {
@@ -492,35 +504,26 @@ class MainActivity : AppCompatActivity() {
 
     private fun switchToTab(index: Int) {
         if (index < 0 || index >= openTabs.size) return
-        if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
-            if (hasUnsavedChanges) openTabs[currentTabIndex].writeText(codeEditor.getCode())
+        if (currentTabIndex in openTabs.indices && hasUnsavedChanges && !loadingFile) {
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
         }
+        hasUnsavedChanges = false
         currentTabIndex = index
         val file = openTabs[index]
-        SyntaxHighlighter.setFileName(file.name)
-        codeEditor.setCode(file.readText())
-        codeEditor.isEnabled = true
         fileName.text = file.name
-
-        // Added exactly as requested
-        val ext = openTabs[index].extension.lowercase()
-        snippetBar.setMode(ext)
-
-        // Track last active HTML file
-        if (file.name.endsWith(".html")) {
-            lastActiveHtmlFile = file
-        }
-
-        hasUnsavedChanges = false
+        snippetBar.setMode(file.extension.lowercase())
+        if (file.name.endsWith(".html")) lastActiveHtmlFile = file
         updateTabHighlight()
-
-        // Update preview when switching tabs
-        if (floatingPreview?.isVisible() == true) {
-            floatingPreview?.show(getPreviewContent(), getBaseUrl())
+        loadIntoEditor(file) {
+            if (floatingPreview?.isVisible() == true) {
+                floatingPreview?.show(getPreviewContent(), getBaseUrl())
+            }
         }
     }
 
     private fun showEmptyState() {
+        loadToken++
+        loadingFile = false
         currentTabIndex = -1
         codeEditor.setCode("")
         codeEditor.hint = if (ProjectManager.getCurrentProject() == null)
@@ -542,6 +545,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveProjectTabs() {
+        if (loadingFile) return
         val dir = ProjectManager.getCurrentProject() ?: return
         if (currentTabIndex >= 0 && openTabs.isNotEmpty())
             openTabs[currentTabIndex].writeText(codeEditor.getCode())
@@ -585,13 +589,21 @@ class MainActivity : AppCompatActivity() {
 
     private fun closeTab(index: Int) {
         if (index < 0 || index >= openTabs.size) return
+        val wasActive = index == currentTabIndex
+        // keep the active tab's text in its own file before anything moves
+        if (currentTabIndex in openTabs.indices && hasUnsavedChanges && !loadingFile) {
+            openTabs[currentTabIndex].writeText(codeEditor.getCode())
+            hasUnsavedChanges = false
+        }
         openTabs.removeAt(index)
         tabContainer.removeViewAt(index)
         if (openTabs.isEmpty()) {
             showEmptyState()
-        } else {
-            val newIndex = if (index >= openTabs.size) openTabs.size - 1 else index
-            switchToTab(newIndex)
+        } else if (wasActive) {
+            currentTabIndex = -1
+            switchToTab(if (index >= openTabs.size) openTabs.size - 1 else index)
+        } else if (index < currentTabIndex) {
+            currentTabIndex--
         }
         updateTabHighlight()
     }
@@ -636,6 +648,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveCurrentFile() {
+        if (loadingFile) return
         if (currentTabIndex >= 0 && openTabs.isNotEmpty()) {
             openTabs[currentTabIndex].writeText(codeEditor.getCode())
             fileName.text = openTabs[currentTabIndex].name
@@ -674,6 +687,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupFindPanel() {
         val panel = findViewById<View>(R.id.findPanel)
         val input = findViewById<android.widget.EditText>(R.id.findInput)
+        val replaceInput = findViewById<android.widget.EditText>(R.id.replaceInput)
         val count = findViewById<TextView>(R.id.findCount)
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE)
             as android.view.inputmethod.InputMethodManager
@@ -681,10 +695,34 @@ class MainActivity : AppCompatActivity() {
         codeEditor.onFindResult = { cur, total ->
             count.text = when {
                 input.text.isNullOrEmpty() -> "0/0"
+                total < 0 -> "Invalid"
                 total == 0 -> "No results"
                 else -> "$cur/$total"
             }
         }
+
+        fun paintToggle(v: TextView, on: Boolean) {
+            v.setBackgroundColor(if (on) 0xFF0E639C.toInt() else 0x00000000)
+        }
+        val toggleCase = findViewById<TextView>(R.id.findCase)
+        val toggleWord = findViewById<TextView>(R.id.findWord)
+        val toggleRegex = findViewById<TextView>(R.id.findRegex)
+        toggleCase.setOnClickListener {
+            codeEditor.findCase = !codeEditor.findCase
+            paintToggle(toggleCase, codeEditor.findCase)
+            codeEditor.find(input.text.toString())
+        }
+        toggleWord.setOnClickListener {
+            codeEditor.findWord = !codeEditor.findWord
+            paintToggle(toggleWord, codeEditor.findWord)
+            codeEditor.find(input.text.toString())
+        }
+        toggleRegex.setOnClickListener {
+            codeEditor.findRegex = !codeEditor.findRegex
+            paintToggle(toggleRegex, codeEditor.findRegex)
+            codeEditor.find(input.text.toString())
+        }
+
         input.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -695,6 +733,15 @@ class MainActivity : AppCompatActivity() {
         input.setOnEditorActionListener { _, _, _ -> codeEditor.findNext(); true }
         findViewById<TextView>(R.id.findNext).setOnClickListener { codeEditor.findNext() }
         findViewById<TextView>(R.id.findPrev).setOnClickListener { codeEditor.findPrev() }
+
+        findViewById<TextView>(R.id.findReplace).setOnClickListener {
+            codeEditor.replaceCurrent(replaceInput.text.toString())
+        }
+        findViewById<TextView>(R.id.findReplaceAll).setOnClickListener {
+            val n = codeEditor.replaceAll(replaceInput.text.toString())
+            Toast.makeText(this, "$n replaced", Toast.LENGTH_SHORT).show()
+        }
+
         findViewById<TextView>(R.id.findClose).setOnClickListener {
             codeEditor.clearFind()
             panel.visibility = View.GONE
@@ -881,7 +928,7 @@ class MainActivity : AppCompatActivity() {
             .getString("browser_package", null)
         if (chosen != null) {
             view.setPackage(chosen)
-            try {
+                        try {
                 startActivity(view)
                 return
             } catch (e: Exception) {
@@ -928,7 +975,7 @@ class MainActivity : AppCompatActivity() {
         applySettings()
     }
 
-        override fun onPause() {
+    override fun onPause() {
         super.onPause()
         if (hasUnsavedChanges) saveCurrentFile()
         saveSession()

@@ -51,18 +51,6 @@ class CodeEditor @JvmOverloads constructor(
     var tabSize = 4
     private fun indentUnit(): String = " ".repeat(tabSize)
 
-    private var cachedLines: List<String> = listOf("")
-
-    private val highlightRunnable = Runnable {
-        val t = text ?: return@Runnable
-        SyntaxHighlighter.highlight(t)
-    }
-
-    private fun scheduleHighlight() {
-        removeCallbacks(highlightRunnable)
-        postDelayed(highlightRunnable, 120)
-    }
-
     var showIndentGuides = true
         set(value) { field = value; invalidate() }
 
@@ -72,6 +60,31 @@ class CodeEditor @JvmOverloads constructor(
     private val indentGuidePaint = Paint().apply {
         color = Color.parseColor("#404040")
         strokeWidth = 2f
+    }
+
+    private var cachedLines: List<String> = listOf("")
+    private var skipNextHighlight = false
+
+    private val highlightRunnable = Runnable {
+        val t = text ?: return@Runnable
+        SyntaxHighlighter.highlight(t)
+    }
+
+    private fun scheduleHighlight() {
+        removeCallbacks(highlightRunnable)
+        val t = text
+        val pos = selectionStart
+        val endedWord = t != null && pos > 0 && pos <= t.length &&
+            !(t[pos - 1].isLetterOrDigit() || t[pos - 1] == '_')
+        // finished a word (space, ( . ; Enter...) -> color soon; mid-word -> wait for a pause
+        postDelayed(highlightRunnable, if (endedWord) 100L else 700L)
+    }
+
+    // Shows text that was already colored on a background thread
+    fun setHighlightedCode(colored: android.text.SpannableStringBuilder) {
+        skipNextHighlight = true
+        removeCallbacks(highlightRunnable)
+        setText(colored)
     }
 
     fun setFontSizeSp(sp: Int) {
@@ -84,15 +97,33 @@ class CodeEditor @JvmOverloads constructor(
         setHorizontallyScrolling(!wrap)
     }
 
-    // ---------- Find ----------
+    // ---------- Find / Replace ----------
     var onFindResult: ((Int, Int) -> Unit)? = null
+    var findCase = false
+    var findWord = false
+    var findRegex = false
     private var findQuery = ""
+    private var findPattern: java.util.regex.Pattern? = null
     private var matchStarts: List<Int> = emptyList()
+    private var matchEnds: List<Int> = emptyList()
     private var matchIndex = -1
     private val matchColor = Color.parseColor("#614D1A")
     private val currentMatchColor = Color.parseColor("#A07A12")
 
     private class MatchSpan(color: Int) : android.text.style.BackgroundColorSpan(color)
+
+    private fun buildFindPattern(): java.util.regex.Pattern? {
+        if (findQuery.isEmpty()) return null
+        return try {
+            var p = if (findRegex) findQuery else java.util.regex.Pattern.quote(findQuery)
+            if (findWord) p = "\\b(?:$p)\\b"
+            java.util.regex.Pattern.compile(
+                p, if (findCase) 0 else java.util.regex.Pattern.CASE_INSENSITIVE
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     fun find(query: String) {
         findQuery = query
@@ -101,33 +132,40 @@ class CodeEditor @JvmOverloads constructor(
 
     fun refreshMatches(fromCursor: Boolean = false) {
         val s = text?.toString() ?: return
-        val found = ArrayList<Int>()
-        if (findQuery.isNotEmpty()) {
-            var i = s.indexOf(findQuery, 0, ignoreCase = true)
-            while (i >= 0 && found.size < 5000) {
-                found.add(i)
-                i = s.indexOf(findQuery, i + findQuery.length, ignoreCase = true)
+        val p = buildFindPattern()
+        findPattern = p
+        val starts = ArrayList<Int>()
+        val ends = ArrayList<Int>()
+        if (p != null) {
+            val m = p.matcher(s)
+            while (m.find() && starts.size < 5000) {
+                if (m.end() > m.start()) {
+                    starts.add(m.start())
+                    ends.add(m.end())
+                }
             }
         }
-        matchStarts = found
+        matchStarts = starts
+        matchEnds = ends
         matchIndex = when {
-            found.isEmpty() -> -1
-            fromCursor -> found.indexOfFirst { it >= selectionStart }
+            starts.isEmpty() -> -1
+            fromCursor -> starts.indexOfFirst { it >= selectionStart }
                 .let { if (it < 0) 0 else it }
-            else -> matchIndex.coerceIn(0, found.size - 1)
+            else -> matchIndex.coerceIn(0, starts.size - 1)
         }
         paintMatches()
         if (fromCursor && matchIndex >= 0) revealCurrentMatch()
-        onFindResult?.invoke(matchIndex + 1, found.size)
+        val invalid = findQuery.isNotEmpty() && p == null
+        onFindResult?.invoke(matchIndex + 1, if (invalid) -1 else starts.size)
     }
 
     private fun paintMatches() {
         val t = text ?: return
         t.getSpans(0, t.length, MatchSpan::class.java).forEach { t.removeSpan(it) }
-        for ((n, start) in matchStarts.withIndex()) {
+        for (n in matchStarts.indices) {
             val color = if (n == matchIndex) currentMatchColor else matchColor
             t.setSpan(
-                MatchSpan(color), start, start + findQuery.length,
+                MatchSpan(color), matchStarts[n], matchEnds[n],
                 android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
         }
@@ -135,7 +173,7 @@ class CodeEditor @JvmOverloads constructor(
 
     private fun revealCurrentMatch() {
         val start = matchStarts[matchIndex]
-        setSelection(start, start + findQuery.length)
+        setSelection(start, matchEnds[matchIndex])
         val l = layout ?: return
         val y = l.getLineTop(l.getLineForOffset(start)) - lineHeight * 3
         (parent as? android.widget.ScrollView)?.smoothScrollTo(0, y.coerceAtLeast(0))
@@ -152,9 +190,50 @@ class CodeEditor @JvmOverloads constructor(
         onFindResult?.invoke(matchIndex + 1, matchStarts.size)
     }
 
+    fun replaceCurrent(replacement: String) {
+        val p = findPattern ?: return
+        if (matchIndex < 0 || matchIndex >= matchStarts.size) return
+        val t = text ?: return
+        val start = matchStarts[matchIndex]
+        val end = matchEnds[matchIndex]
+        val found = t.subSequence(start, end).toString()
+        val out = if (findRegex) {
+            try { p.matcher(found).replaceFirst(replacement) } catch (e: Exception) { replacement }
+        } else replacement
+        t.replace(start, end, out)
+        setSelection(start + out.length)
+        refreshMatches(fromCursor = true)
+    }
+
+    fun replaceAll(replacement: String): Int {
+        val p = findPattern ?: return 0
+        val t = text ?: return 0
+        val m = p.matcher(t.toString())
+        val buf = StringBuffer()
+        var n = 0
+        try {
+            val repl = if (findRegex) replacement
+                else java.util.regex.Matcher.quoteReplacement(replacement)
+            while (m.find()) {
+                if (m.end() == m.start()) continue
+                n++
+                m.appendReplacement(buf, repl)
+            }
+            if (n == 0) return 0
+            m.appendTail(buf)
+        } catch (e: Exception) {
+            return 0
+        }
+        t.replace(0, t.length, buf.toString())
+        refreshMatches(fromCursor = true)
+        return n
+    }
+
     fun clearFind() {
         findQuery = ""
+        findPattern = null
         matchStarts = emptyList()
+        matchEnds = emptyList()
         matchIndex = -1
         paintMatches()
         onFindResult?.invoke(0, 0)
@@ -224,7 +303,7 @@ class CodeEditor @JvmOverloads constructor(
                                 )
 
                             val nextIsClosingTag = textAfter.trimStart().startsWith("</")
-                            
+
                             val opensBracket = trimmed.endsWith("{") ||
                                 trimmed.endsWith("[") || trimmed.endsWith("(")
                             val nextIsClosingBracket =
@@ -319,7 +398,7 @@ class CodeEditor @JvmOverloads constructor(
                 cachedLines = str.split("\n")
                 onTextChangedListener?.invoke(str)
                 if (isAutoCompleting) return
-                scheduleHighlight()
+                if (skipNextHighlight) skipNextHighlight = false else scheduleHighlight()
                 updateCurrentLine()
             }
         })
@@ -394,7 +473,7 @@ class CodeEditor @JvmOverloads constructor(
                 }
             }
         }
-        
+
         if (showIndentGuides) {
             val lay = layout
             if (lay != null) {
@@ -419,7 +498,7 @@ class CodeEditor @JvmOverloads constructor(
                 }
             }
         }
-        
+
         super.onDraw(canvas)
     }
 

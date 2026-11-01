@@ -108,68 +108,150 @@
 
         </HorizontalScrollView>
 
+        <!-- Find / Replace panel -->
         <LinearLayout
             android:id="@+id/findPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:orientation="vertical"
             android:background="#252526"
             android:padding="6dp"
             android:visibility="gone">
 
-            <EditText
-                android:id="@+id/findInput"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:background="#1E1E1E"
-                android:hint="Find"
-                android:inputType="text"
-                android:imeOptions="actionSearch"
-                android:singleLine="true"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:textColor="#D4D4D4"
-                android:textColorHint="#858585"
-                android:textSize="14sp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <TextView
-                android:id="@+id/findCount"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:minWidth="64dp"
-                android:gravity="center"
-                android:text="0/0"
-                android:textColor="#CCCCCC"
-                android:textSize="12sp"/>
+                <EditText
+                    android:id="@+id/findInput"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="#1E1E1E"
+                    android:hint="Find"
+                    android:inputType="text"
+                    android:imeOptions="actionSearch"
+                    android:singleLine="true"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textColor="#D4D4D4"
+                    android:textColorHint="#858585"
+                    android:textSize="14sp"/>
 
-            <TextView
-                android:id="@+id/findPrev"
-                android:layout_width="36dp"
-                android:layout_height="40dp"
-                android:gravity="center"
-                android:text="▲"
-                android:textColor="#CCCCCC"
-                android:background="?android:attr/selectableItemBackground"/>
+                <TextView
+                    android:id="@+id/findCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minWidth="64dp"
+                    android:gravity="center"
+                    android:text="0/0"
+                    android:textColor="#CCCCCC"
+                    android:textSize="12sp"/>
 
-            <TextView
-                android:id="@+id/findNext"
-                android:layout_width="36dp"
-                android:layout_height="40dp"
-                android:gravity="center"
-                android:text="▼"
-                android:textColor="#CCCCCC"
-                android:background="?android:attr/selectableItemBackground"/>
+                <TextView
+                    android:id="@+id/findPrev"
+                    android:layout_width="36dp"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="▲"
+                    android:textColor="#CCCCCC"
+                    android:background="?android:attr/selectableItemBackground"/>
 
-            <TextView
-                android:id="@+id/findClose"
-                android:layout_width="36dp"
-                android:layout_height="40dp"
-                android:gravity="center"
-                android:text="✕"
-                android:textColor="#CCCCCC"
-                android:background="?android:attr/selectableItemBackground"/>
+                <TextView
+                    android:id="@+id/findNext"
+                    android:layout_width="36dp"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="▼"
+                    android:textColor="#CCCCCC"
+                    android:background="?android:attr/selectableItemBackground"/>
+
+                <TextView
+                    android:id="@+id/findClose"
+                    android:layout_width="36dp"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="✕"
+                    android:textColor="#CCCCCC"
+                    android:background="?android:attr/selectableItemBackground"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/findCase"
+                    android:layout_width="34dp"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="Aa"
+                    android:textColor="#CCCCCC"
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/findWord"
+                    android:layout_width="34dp"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="W"
+                    android:textColor="#CCCCCC"
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/findRegex"
+                    android:layout_width="34dp"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text=".*"
+                    android:textColor="#CCCCCC"
+                    android:textSize="13sp"/>
+
+                <EditText
+                    android:id="@+id/replaceInput"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:background="#1E1E1E"
+                    android:hint="Replace"
+                    android:inputType="text"
+                    android:singleLine="true"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textColor="#D4D4D4"
+                    android:textColorHint="#858585"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/findReplace"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:gravity="center"
+                    android:text="Replace"
+                    android:textColor="#52AAF8"
+                    android:textSize="13sp"
+                    android:background="?android:attr/selectableItemBackground"/>
+
+                <TextView
+                    android:id="@+id/findReplaceAll"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:gravity="center"
+                    android:text="All"
+                    android:textColor="#52AAF8"
+                    android:textSize="13sp"
+                    android:background="?android:attr/selectableItemBackground"/>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Code editor -->
@@ -177,7 +259,7 @@
             android:id="@+id/scrollView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
             android:fillViewport="true">
 
             <com.rams.editor.CodeEditor
