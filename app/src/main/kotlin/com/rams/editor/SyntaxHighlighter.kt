@@ -2,7 +2,9 @@ package com.rams.editor
 
 import android.graphics.Color
 import android.text.Spannable
+import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
+import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 
 object SyntaxHighlighter {
@@ -39,35 +41,51 @@ object SyntaxHighlighter {
 
     private enum class Mode { AUTO, HTML, CSS, JS, NONE }
 
+    // Used only by the live (typing) path
     private var mode = Mode.AUTO
-    private var src = ""
-    private val cache = HashMap<String, Pattern>()
 
-    fun setFileName(name: String) {
-        mode = when (name.substringAfterLast('.', "").lowercase()) {
+    // Safe to share between threads
+    private val cache = ConcurrentHashMap<String, Pattern>()
+
+    private fun modeFor(name: String): Mode =
+        when (name.substringAfterLast('.', "").lowercase()) {
             "html", "htm", "xml", "svg" -> Mode.HTML
             "css" -> Mode.CSS
             "js", "mjs", "cjs", "jsx", "ts", "tsx", "json" -> Mode.JS
             else -> Mode.NONE
         }
+
+    fun setFileName(name: String) {
+        mode = modeFor(name)
     }
 
+    // Builds a fully colored text off the main thread, then the editor just displays it
+    fun build(code: String, name: String): SpannableStringBuilder {
+        val sb = SpannableStringBuilder(code)
+        colorize(sb, code, modeFor(name))
+        return sb
+    }
+
+    // Re-colors live text while typing
     fun highlight(text: Spannable) {
         clearSpans(text)
-        src = text.toString()
-        val m = if (mode == Mode.AUTO) {
+        colorize(text, text.toString(), mode)
+    }
+
+    private fun colorize(text: Spannable, src: String, requested: Mode) {
+        val m = if (requested == Mode.AUTO) {
             when {
                 src.contains("<html") || src.contains("<!DOCTYPE") -> Mode.HTML
                 JS_HINT.containsMatchIn(src) -> Mode.JS
                 src.contains("{") && src.contains(":") -> Mode.CSS
                 else -> Mode.JS
             }
-        } else mode
+        } else requested
 
         when (m) {
-            Mode.HTML -> highlightHtml(text)
-            Mode.CSS -> highlightCss(text, 0, src.length)
-            Mode.JS -> highlightJs(text, 0, src.length)
+            Mode.HTML -> highlightHtml(text, src)
+            Mode.CSS -> highlightCss(text, src, 0, src.length)
+            Mode.JS -> highlightJs(text, src, 0, src.length)
             else -> {}
         }
     }
@@ -77,52 +95,54 @@ object SyntaxHighlighter {
             .forEach { text.removeSpan(it) }
     }
 
-    private fun highlightHtml(text: Spannable) {
+    private fun highlightHtml(text: Spannable, src: String) {
         val n = src.length
-        paint(text, "<!DOCTYPE[^>]*>", C_BRACKET, 0, n)
-        paint(text, "</?|/?>", C_BRACKET, 0, n)
-        paint(text, "(?:(?<=<)|(?<=</))[a-zA-Z][a-zA-Z0-9-]*", C_BLUE, 0, n)
-        paint(text, "\\s[a-zA-Z:@-]+(?==)", C_CYAN, 0, n)
-        paint(text, "(?<==)(?:\"[^\"]*\"|'[^']*')", C_YELLOW, 0, n)
+        paint(text, src, "<!DOCTYPE[^>]*>", C_BRACKET, 0, n)
+        paint(text, src, "</?|/?>", C_BRACKET, 0, n)
+        paint(text, src, "(?:(?<=<)|(?<=</))[a-zA-Z][a-zA-Z0-9-]*", C_BLUE, 0, n)
+        paint(text, src, "\\s[a-zA-Z:@-]+(?==)", C_CYAN, 0, n)
+        paint(text, src, "(?<==)(?:\"[^\"]*\"|'[^']*')", C_YELLOW, 0, n)
 
         // <style> and <script> blocks inside the HTML file
         val sm = STYLE_BLOCK.matcher(src)
-        while (sm.find()) highlightCss(text, sm.start(1), sm.end(1))
+        while (sm.find()) highlightCss(text, src, sm.start(1), sm.end(1))
         val jm = SCRIPT_BLOCK.matcher(src)
-        while (jm.find()) highlightJs(text, jm.start(1), jm.end(1))
+        while (jm.find()) highlightJs(text, src, jm.start(1), jm.end(1))
 
-        paint(text, "<!--[\\s\\S]*?-->", C_COMMENT, 0, n)
+        paint(text, src, "<!--[\\s\\S]*?-->", C_COMMENT, 0, n)
     }
 
-    private fun highlightCss(text: Spannable, s: Int, e: Int) {
-        paint(text, "[a-zA-Z-]+(?=\\s*:)", C_CYAN, s, e)
-        paint(text, "\\b\\d+(?:\\.\\d+)?\\b", C_CYAN, s, e)
-        paint(text, CSS_CYAN_WORDS, C_CYAN, s, e)
-        paint(text, CSS_VIOLET_WORDS, C_VIOLET, s, e)
-        paint(text, "#[0-9a-fA-F]{3,8}\\b", C_VIOLET, s, e)
-        paint(text, "(?:[.#]|::?-?)?[a-zA-Z_][a-zA-Z0-9_-]*(?=[^{};]*\\{)", C_MINT, s, e)
-        paint(text, "@[a-zA-Z-]+", C_PURPLE, s, e)
-        paint(text, "(?<=\\()[a-zA-Z-]+(?=\\s*:)", C_CYAN, s, e)
-        paint(text, "\\d+(?:\\.\\d+)?(?:px|em|rem|vh|vw|%|pt|pc|cm|mm|in|s|ms|deg|fr)", C_PALE_MINT, s, e)
-        paint(text, "\"[^\"\\n]*\"|'[^'\\n]*'", C_YELLOW, s, e)
-        paint(text, "/\\*[\\s\\S]*?\\*/", C_COMMENT, s, e)
+    private fun highlightCss(text: Spannable, src: String, s: Int, e: Int) {
+        paint(text, src, "[a-zA-Z-]+(?=\\s*:)", C_CYAN, s, e)
+        paint(text, src, "\\b\\d+(?:\\.\\d+)?\\b", C_CYAN, s, e)
+        paint(text, src, CSS_CYAN_WORDS, C_CYAN, s, e)
+        paint(text, src, CSS_VIOLET_WORDS, C_VIOLET, s, e)
+        paint(text, src, "#[0-9a-fA-F]{3,8}\\b", C_VIOLET, s, e)
+        paint(text, src, "(?:[.#]|::?-?)?[a-zA-Z_][a-zA-Z0-9_-]*(?=[^{};]*\\{)", C_MINT, s, e)
+        paint(text, src, "@[a-zA-Z-]+", C_PURPLE, s, e)
+        paint(text, src, "(?<=\\()[a-zA-Z-]+(?=\\s*:)", C_CYAN, s, e)
+        paint(text, src, "\\d+(?:\\.\\d+)?(?:px|em|rem|vh|vw|%|pt|pc|cm|mm|in|s|ms|deg|fr)", C_PALE_MINT, s, e)
+        paint(text, src, "\"[^\"\\n]*\"|'[^'\\n]*'", C_YELLOW, s, e)
+        paint(text, src, "/\\*[\\s\\S]*?\\*/", C_COMMENT, s, e)
     }
 
-    private fun highlightJs(text: Spannable, s: Int, e: Int) {
-        paint(text, "[a-zA-Z_][a-zA-Z0-9_]*", C_CYAN, s, e)
-        paint(text, "\\b[A-Z][a-zA-Z0-9_]*\\b", C_TEAL, s, e)
-        paint(text, "\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()", C_CREAM, s, e)
-        paint(text, JS_DECL, C_BLUE, s, e)
-        paint(text, JS_FLOW, C_PURPLE, s, e)
-        paint(text, JS_LITERAL, C_VIOLET, s, e)
-        paint(text, "\\b\\d+(?:\\.\\d+)?\\b", C_PALE_MINT, s, e)
-        paint(text, "\"[^\"\\n]*\"|'[^'\\n]*'|`[^`]*`", C_YELLOW, s, e)
-        paint(text, "(?<!:)//[^\\n]*", C_COMMENT, s, e)
-        paint(text, "/\\*[\\s\\S]*?\\*/", C_COMMENT, s, e)
+    private fun highlightJs(text: Spannable, src: String, s: Int, e: Int) {
+        paint(text, src, "[a-zA-Z_][a-zA-Z0-9_]*", C_CYAN, s, e)
+        paint(text, src, "\\b[A-Z][a-zA-Z0-9_]*\\b", C_TEAL, s, e)
+        paint(text, src, "\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()", C_CREAM, s, e)
+        paint(text, src, JS_DECL, C_BLUE, s, e)
+        paint(text, src, JS_FLOW, C_PURPLE, s, e)
+        paint(text, src, JS_LITERAL, C_VIOLET, s, e)
+        paint(text, src, "\\b\\d+(?:\\.\\d+)?\\b", C_PALE_MINT, s, e)
+        paint(text, src, "\"[^\"\\n]*\"|'[^'\\n]*'|`[^`]*`", C_YELLOW, s, e)
+        paint(text, src, "(?<!:)//[^\\n]*", C_COMMENT, s, e)
+        paint(text, src, "/\\*[\\s\\S]*?\\*/", C_COMMENT, s, e)
     }
 
     // Later calls win where colors overlap, so order matters above
-    private fun paint(text: Spannable, regex: String, color: Int, start: Int, end: Int) {
+    private fun paint(
+        text: Spannable, src: String, regex: String, color: Int, start: Int, end: Int
+    ) {
         if (start >= end) return
         try {
             val p = cache.getOrPut(regex) { Pattern.compile(regex) }
