@@ -92,11 +92,7 @@ class MainActivity : AppCompatActivity() {
             snippetRow1,
             snippetRow2
         ) { code, cursorOffset ->
-            val start = codeEditor.selectionStart.coerceAtLeast(0)
-            codeEditor.text?.insert(start, code)
-            codeEditor.setSelection((start + cursorOffset).coerceAtMost(
-                codeEditor.text?.length ?: 0
-            ))
+            codeEditor.insertSnippet(code, cursorOffset)
         }
 
         setupCursorKeys()
@@ -785,12 +781,7 @@ class MainActivity : AppCompatActivity() {
                 codeEditor.setSelection((pos + dx).coerceIn(0, text.length))
                 return
             }
-            // Up / down follow the lines as you see them, even with word wrap on
-            val layout = codeEditor.layout ?: return
-            val line = layout.getLineForOffset(pos)
-            val x = layout.getPrimaryHorizontal(pos)
-            val target = (line + dy).coerceIn(0, layout.lineCount - 1)
-            codeEditor.setSelection(layout.getOffsetForHorizontal(target, x))
+            codeEditor.moveCursorLines(dy)
         }
 
         bindRepeat(findViewById(R.id.keyLeft)) { move(-1, 0) }

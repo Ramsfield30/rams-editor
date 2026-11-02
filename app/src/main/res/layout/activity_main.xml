@@ -254,27 +254,12 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Code editor -->
-        <ScrollView
-            android:id="@+id/scrollView"
+        <!-- Code editor (scrolls by itself) -->
+        <com.rams.editor.CodeEditor
+            android:id="@+id/codeEditor"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="true">
-
-            <com.rams.editor.CodeEditor
-                android:id="@+id/codeEditor"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="12dp"
-                android:textColor="#D4D4D4"
-                android:textSize="14sp"
-                android:background="#1E1E1E"
-                android:fontFamily="monospace"
-                android:inputType="textMultiLine|textNoSuggestions"
-                android:gravity="top"/>
-
-        </ScrollView>
+            android:layout_weight="1"/>
 
         <!-- Console panel -->
         <LinearLayout
