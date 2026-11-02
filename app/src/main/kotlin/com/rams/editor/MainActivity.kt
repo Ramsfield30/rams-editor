@@ -448,22 +448,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadIntoEditor(file: File, onLoaded: () -> Unit) {
-        val token = ++loadToken
-        loadingFile = true
+        loadToken++
         val code = file.readText()
-        Thread {
-            val colored = SyntaxHighlighter.build(code, file.name)
-            runOnUiThread {
-                if (token != loadToken || isFinishing) return@runOnUiThread
-                SyntaxHighlighter.setFileName(file.name)
-                codeEditor.setHighlightedCode(colored)
-                codeEditor.isEnabled = true
-                hasUnsavedChanges = false
-                fileName.text = file.name
-                loadingFile = false
-                onLoaded()
-            }
-        }.start()
+        SyntaxHighlighter.setFileName(file.name)
+        codeEditor.setCode(code)
+        codeEditor.isEnabled = true
+        hasUnsavedChanges = false
+        fileName.text = file.name
+        loadingFile = false
+        onLoaded()
     }
 
     private fun openFileInTab(file: File) {
