@@ -450,7 +450,7 @@ class MainActivity : AppCompatActivity() {
     private fun loadIntoEditor(file: File, onLoaded: () -> Unit) {
         loadToken++
         val code = file.readText()
-        SyntaxHighlighter.setFileName(file.name)
+        codeEditor.setLanguageForFile(file.name)
         codeEditor.setCode(code)
         codeEditor.isEnabled = true
         hasUnsavedChanges = false

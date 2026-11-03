@@ -58,6 +58,9 @@ class CodeEditor @JvmOverloads constructor(
         scheme.setColor(EditorColorScheme.LINE_DIVIDER, Color.parseColor("#3C3C3C"))
         scheme.setColor(EditorColorScheme.CURRENT_LINE, Color.parseColor("#282828"))
         scheme.setColor(EditorColorScheme.SELECTED_TEXT_BACKGROUND, Color.parseColor("#264F78"))
+        for (i in 1 until SyntaxHighlighter.PALETTE.size) {
+            scheme.setColor(SyntaxHighlighter.COLOR_BASE + i, SyntaxHighlighter.PALETTE[i])
+        }
         colorScheme = scheme
         typefaceText = Typeface.MONOSPACE
         setTextSize(14f)
@@ -81,6 +84,10 @@ class CodeEditor @JvmOverloads constructor(
     }
 
     // ---- Text in and out ----
+    fun setLanguageForFile(name: String) {
+        setEditorLanguage(RamsLanguage(name))
+    }
+
     fun getCode(): String = text.toString()
 
     fun setCode(code: String) {
