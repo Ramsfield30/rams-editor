@@ -34,6 +34,13 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
     private companion object {
         // One shared background thread for all files
         val worker = Executors.newSingleThreadExecutor()
+
+        // Remembers recent results so reopening a file shows colors at once
+        val recent = object : LinkedHashMap<String, Pair<String, ByteArray>>(8, 0.75f, true) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, Pair<String, ByteArray>>?
+            ): Boolean = size > 6
+        }
     }
 
     private var receiver: StyleReceiver? = null
@@ -80,9 +87,18 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
         val ref = content ?: return
         val code = ref.reference.toString()
         val myVersion = version.incrementAndGet()
+        val key = fileName + ":" + code.length
+
+        val hit = synchronized(recent) { recent[key] }
+        if (hit != null && hit.first == code) {
+            receiver?.setStyles(this, buildStyles(code, hit.second))
+            return
+        }
+
         worker.execute {
             if (myVersion != version.get()) return@execute
             val kinds = SyntaxHighlighter.analyze(code, fileName)
+            synchronized(recent) { recent[key] = Pair(code, kinds) }
             if (myVersion != version.get()) return@execute
             val styles = buildStyles(code, kinds)
             mainHandler.post {

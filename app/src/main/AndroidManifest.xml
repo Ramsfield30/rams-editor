@@ -19,6 +19,7 @@
     <application
         android:label="Rams Editor"
         android:icon="@drawable/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
         android:hardwareAccelerated="true">
 

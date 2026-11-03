@@ -276,11 +276,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getBaseUrl(): String? {
-        // Use last active HTML file's directory as base
         val baseFile = lastActiveHtmlFile
-            ?: if (currentTabIndex >= 0 && openTabs.isNotEmpty())
-                openTabs[currentTabIndex] else null
-        return baseFile?.parent?.let { "file://$it/" }
+            ?: if (currentTabIndex in openTabs.indices) openTabs[currentTabIndex] else null
+        val dir = baseFile?.parentFile ?: return null
+
+        // Serve the whole project so /style.css and ../style.css both work
+        val project = ProjectManager.getCurrentProject()
+        val root = if (project != null &&
+            baseFile.canonicalPath.startsWith(project.canonicalPath + File.separator)
+        ) project else dir
+
+        val port = LocalServer.start(root)
+        if (port < 0) return "file://${dir.path}/"
+
+        val rel = dir.canonicalFile.relativeTo(root.canonicalFile).path
+            .replace(File.separatorChar, '/')
+        return "http://127.0.0.1:$port/" +
+            (if (rel.isEmpty()) "" else Uri.encode(rel, "/") + "/")
     }
 
     private fun getPreviewContent(): String {
