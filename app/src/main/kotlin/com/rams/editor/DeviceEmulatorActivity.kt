@@ -94,6 +94,7 @@ class DeviceEmulatorActivity : AppCompatActivity() {
             webViewClient = WebViewClient()
             webChromeClient = ConsoleLog.chromeClient()
             settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true
             settings.cacheMode = WebSettings.LOAD_NO_CACHE

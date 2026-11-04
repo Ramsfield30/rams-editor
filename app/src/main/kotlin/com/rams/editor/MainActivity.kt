@@ -257,7 +257,8 @@ class MainActivity : AppCompatActivity() {
         previewRunnable = Runnable {
             if (tabAtSchedule == currentTabIndex) updatePreview(code)
         }
-        previewHandler.postDelayed(previewRunnable!!, 200)
+        val isCss = openTabs.getOrNull(currentTabIndex)?.name?.endsWith(".css") == true
+        previewHandler.postDelayed(previewRunnable!!, if (isCss) 200L else 700L)
     }
 
     private fun updatePreview(code: String) {

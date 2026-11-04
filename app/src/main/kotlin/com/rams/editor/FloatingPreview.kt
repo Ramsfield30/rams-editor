@@ -33,6 +33,7 @@ class FloatingPreview(private val context: Context) {
     private var currentBaseUrl: String? = null
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockRunnable: Runnable? = null
+    private var restoreScrollY = 0
 
     private val params = WindowManager.LayoutParams(
         420, 600,
@@ -50,7 +51,7 @@ class FloatingPreview(private val context: Context) {
         ConsoleLog.clear()
         currentBaseUrl = baseUrl
         if (isShowing) {
-            update(htmlContent, baseUrl)
+            update(htmlContent, baseUrl, keepScroll = false)
             return
         }
 
@@ -63,9 +64,22 @@ class FloatingPreview(private val context: Context) {
                 applyVirtualScreen(right - left, bottom - top)
             }
         webView?.apply {
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    val y = restoreScrollY
+                    if (y > 0) {
+                        view?.evaluateJavascript("window.scrollTo(0,$y)", null)
+                        // Images and fonts can change the height a moment later
+                        view?.postDelayed({
+                            view.evaluateJavascript("window.scrollTo(0,$y)", null)
+                        }, 250)
+                    }
+                }
+            }
             webChromeClient = ConsoleLog.chromeClient()
             settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
             settings.setSupportZoom(true)
@@ -107,16 +121,26 @@ class FloatingPreview(private val context: Context) {
         isShowing = true
     }
 
-    fun update(htmlContent: String, baseUrl: String? = null) {
+    fun update(htmlContent: String, baseUrl: String? = null, keepScroll: Boolean = true) {
         ConsoleLog.clear()
         if (baseUrl != null) currentBaseUrl = baseUrl
-        webView?.loadDataWithBaseURL(
-            currentBaseUrl,
-            injectViewport(htmlContent),
-            "text/html",
-            "UTF-8",
-            null
-        )
+        val wv = webView ?: return
+        if (!keepScroll) {
+            restoreScrollY = 0
+            wv.loadDataWithBaseURL(
+                currentBaseUrl, injectViewport(htmlContent), "text/html", "UTF-8", null
+            )
+            return
+        }
+        // Remember how far down the page is, then reload and scroll back
+        wv.evaluateJavascript(
+            "(function(){return Math.round(window.pageYOffset||document.documentElement.scrollTop||0)})()"
+        ) { value ->
+            restoreScrollY = value?.trim('"')?.toDoubleOrNull()?.toInt() ?: restoreScrollY
+            wv.loadDataWithBaseURL(
+                currentBaseUrl, injectViewport(htmlContent), "text/html", "UTF-8", null
+            )
+        }
     }
 
     fun updateCss(cssContent: String, fileName: String) {

@@ -97,6 +97,27 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
 
         worker.execute {
             if (myVersion != version.get()) return@execute
+
+            // Quick first pass: color just the top of a big file so you see it at once
+            if (code.length > 12000) {
+                var cut = 0
+                var lines = 0
+                while (lines < 150 && cut < code.length) {
+                    val nl = code.indexOf('\n', cut)
+                    if (nl < 0) { cut = code.length; break }
+                    cut = nl + 1
+                    lines++
+                }
+                val headKinds = SyntaxHighlighter.analyze(code.substring(0, cut), fileName)
+                val quick = ByteArray(code.length)
+                System.arraycopy(headKinds, 0, quick, 0, headKinds.size)
+                val quickStyles = buildStyles(code, quick)
+                mainHandler.post {
+                    if (myVersion == version.get()) receiver?.setStyles(this, quickStyles)
+                }
+            }
+
+            if (myVersion != version.get()) return@execute
             val kinds = SyntaxHighlighter.analyze(code, fileName)
             synchronized(recent) { recent[key] = Pair(code, kinds) }
             if (myVersion != version.get()) return@execute
