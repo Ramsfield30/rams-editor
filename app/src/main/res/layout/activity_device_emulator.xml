@@ -3,177 +3,203 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1E1E1E">
+    android:background="#E3E3E3">
 
-    <!-- Header -->
+    <!-- Top bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#F7F8FC"
+        android:elevation="4dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <TextView
+            android:id="@+id/emuClose"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:text="✕"
+            android:textColor="#1A1D24"
+            android:textSize="22sp"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="24dp"
+            android:singleLine="true"
+            android:text="Device Emulator"
+            android:textColor="#1A1D24"
+            android:textSize="19sp"/>
+
+        <TextView
+            android:id="@+id/emuHelp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:gravity="center"
+            android:text="?"
+            android:textColor="#1A1D24"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/emuMore"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:text="⋮"
+            android:textColor="#1A1D24"
+            android:textSize="24sp"/>
+    </LinearLayout>
+
+    <!-- Device and size controls -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#2D2D2D"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp">
-
-        <ImageView
-            android:id="@+id/emuBack"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="10dp"
-            android:src="@drawable/ic_back"/>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:paddingStart="8dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Device Emulator"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:singleLine="true"/>
-
-            <TextView
-                android:id="@+id/emuSubtitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Responsive"
-                android:textColor="#AAAAAA"
-                android:textSize="13sp"
-                android:singleLine="true"/>
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/emuRefresh"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:text="⟳"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:gravity="center"/>
-    </LinearLayout>
-
-    <!-- Controls -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#252526"
-        android:paddingStart="8dp"
+        android:background="#CDD2DA"
+        android:paddingStart="12dp"
         android:paddingEnd="8dp">
 
         <TextView
             android:id="@+id/emuDevice"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="44dp"
             android:layout_weight="1"
-            android:background="#1E1E1E"
             android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:singleLine="true"
+            android:ellipsize="end"
             android:text="Responsive ▾"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:singleLine="true"/>
+            android:textColor="#1A1D24"
+            android:textSize="16sp"/>
 
         <EditText
             android:id="@+id/emuWidth"
-            android:layout_width="58dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
-            android:background="#1E1E1E"
+            android:layout_width="80dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="12dp"
             android:gravity="center"
             android:inputType="number"
             android:imeOptions="actionDone"
             android:singleLine="true"
             android:selectAllOnFocus="true"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"/>
+            android:textColor="#1A1D24"
+            android:textSize="17sp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:text="×"
-            android:textColor="#AAAAAA"
-            android:textSize="16sp"/>
+            android:textColor="#3A3F4A"
+            android:textSize="20sp"/>
 
         <EditText
             android:id="@+id/emuHeight"
-            android:layout_width="58dp"
-            android:layout_height="36dp"
-            android:background="#1E1E1E"
+            android:layout_width="80dp"
+            android:layout_height="44dp"
             android:gravity="center"
             android:inputType="number"
             android:imeOptions="actionDone"
             android:singleLine="true"
             android:selectAllOnFocus="true"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"/>
+            android:textColor="#1A1D24"
+            android:textSize="17sp"/>
 
-        <ImageView
-            android:id="@+id/emuRotate"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="10dp"
-            android:src="@android:drawable/ic_menu_rotate"/>
+        <TextView
+            android:id="@+id/emuApply"
+            android:layout_width="52dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:text="▶"
+            android:textColor="#1A1D24"
+            android:textSize="22sp"/>
     </LinearLayout>
 
-    <!-- Stage -->
+    <!-- Stage: the page is shown inside a rounded frame -->
     <FrameLayout
         android:id="@+id/emuStage"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#2B2B2B">
+        android:background="#E3E3E3">
 
-        <WebView
-            android:id="@+id/emuWebView"
-            android:layout_width="360dp"
-            android:layout_height="640dp"/>
+        <FrameLayout
+            android:id="@+id/emuFrame"
+            android:layout_width="375dp"
+            android:layout_height="667dp"
+            android:background="#FFFFFF"
+            android:elevation="6dp">
+
+            <WebView
+                android:id="@+id/emuWebView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </FrameLayout>
+
+        <!-- Drag to change the width -->
+        <LinearLayout
+            android:id="@+id/emuHandleRight"
+            android:layout_width="26dp"
+            android:layout_height="72dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <View
+                android:layout_width="3dp"
+                android:layout_height="48dp"
+                android:background="#4B5563"/>
+
+            <View
+                android:layout_width="3dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="5dp"
+                android:background="#4B5563"/>
+        </LinearLayout>
+
+        <!-- Drag to change the height -->
+        <LinearLayout
+            android:id="@+id/emuHandleBottom"
+            android:layout_width="72dp"
+            android:layout_height="26dp"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <View
+                android:layout_width="48dp"
+                android:layout_height="3dp"
+                android:background="#4B5563"/>
+
+            <View
+                android:layout_width="48dp"
+                android:layout_height="3dp"
+                android:layout_marginTop="5dp"
+                android:background="#4B5563"/>
+        </LinearLayout>
     </FrameLayout>
 
-    <!-- Size chips -->
-    <LinearLayout
+    <!-- Size presets -->
+    <HorizontalScrollView
+        android:id="@+id/emuChipScroll"
         android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:orientation="horizontal"
-        android:background="#252526">
+        android:layout_height="68dp"
+        android:background="#CDD2DA"
+        android:scrollbars="none">
 
-        <TextView
-            android:id="@+id/emuChipS"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/emuChips"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="S · 320"
-            android:textColor="#CCCCCC"
-            android:textSize="13sp"/>
-
-        <TextView
-            android:id="@+id/emuChipM"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="M · 375"
-            android:textColor="#CCCCCC"
-            android:textSize="13sp"/>
-
-        <TextView
-            android:id="@+id/emuChipL"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="L · 435"
-            android:textColor="#CCCCCC"
-            android:textSize="13sp"/>
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
+    </HorizontalScrollView>
 </LinearLayout>
