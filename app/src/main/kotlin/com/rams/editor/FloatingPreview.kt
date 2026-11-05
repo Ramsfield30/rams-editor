@@ -28,6 +28,8 @@ class FloatingPreview(private val context: Context) {
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var floatingView: View? = null
     private var webView: WebView? = null
+    private var holder: FrameLayout? = null
+    private var pendingView: WebView? = null
     private var isShowing = false
     private var isInteractive = false
     private var currentBaseUrl: String? = null
@@ -59,10 +61,10 @@ class FloatingPreview(private val context: Context) {
             .inflate(R.layout.floating_preview, null)
 
         webView = floatingView?.findViewById(R.id.previewWebView)
-        floatingView?.findViewById<FrameLayout>(R.id.previewWebHolder)
-            ?.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
-                applyVirtualScreen(right - left, bottom - top)
-            }
+        holder = floatingView?.findViewById(R.id.previewWebHolder)
+        holder?.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+            applyVirtualScreen(right - left, bottom - top)
+        }
         webView?.apply {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
@@ -124,22 +126,78 @@ class FloatingPreview(private val context: Context) {
     fun update(htmlContent: String, baseUrl: String? = null, keepScroll: Boolean = true) {
         ConsoleLog.clear()
         if (baseUrl != null) currentBaseUrl = baseUrl
-        val wv = webView ?: return
+        val front = webView ?: return
+        val host = holder ?: return
+
+        // A newer edit replaces any page that is still loading in the background
+        pendingView?.let { old ->
+            host.removeView(old)
+            old.destroy()
+            pendingView = null
+        }
+
+        val html = injectViewport(htmlContent)
+        val base = currentBaseUrl
+
+        val startLoad: (Int) -> Unit = { scrollY ->
+            val back = newBackView(front)
+            pendingView = back
+            back.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    val v = view ?: return
+                    if (v !== pendingView) return
+                    if (scrollY > 0) v.evaluateJavascript("window.scrollTo(0,$scrollY)", null)
+                    // Give the page a moment to lay out, then swap so you never see a blank page
+                    v.postDelayed({
+                        if (v !== pendingView) return@postDelayed
+                        if (scrollY > 0) v.evaluateJavascript("window.scrollTo(0,$scrollY)", null)
+                        host.removeView(front)
+                        front.destroy()
+                        webView = v
+                        pendingView = null
+                        applyVirtualScreen(host.width, host.height)
+                    }, 150)
+                }
+            }
+            host.addView(back, 0)
+            back.loadDataWithBaseURL(base, html, "text/html", "UTF-8", null)
+        }
+
         if (!keepScroll) {
-            restoreScrollY = 0
-            wv.loadDataWithBaseURL(
-                currentBaseUrl, injectViewport(htmlContent), "text/html", "UTF-8", null
-            )
+            startLoad(0)
             return
         }
-        // Remember how far down the page is, then reload and scroll back
-        wv.evaluateJavascript(
+        front.evaluateJavascript(
             "(function(){return Math.round(window.pageYOffset||document.documentElement.scrollTop||0)})()"
         ) { value ->
-            restoreScrollY = value?.trim('"')?.toDoubleOrNull()?.toInt() ?: restoreScrollY
-            wv.loadDataWithBaseURL(
-                currentBaseUrl, injectViewport(htmlContent), "text/html", "UTF-8", null
-            )
+            if (webView === front) {
+                startLoad(value?.trim('"')?.toDoubleOrNull()?.toInt() ?: 0)
+            }
+        }
+    }
+
+    private fun newBackView(front: WebView): WebView {
+        val flp = front.layoutParams as FrameLayout.LayoutParams
+        return WebView(context).apply {
+            layoutParams = FrameLayout.LayoutParams(flp.width, flp.height)
+            pivotX = 0f
+            pivotY = 0f
+            scaleX = front.scaleX
+            scaleY = front.scaleY
+            webChromeClient = ConsoleLog.chromeClient()
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = false
+            settings.setSupportZoom(true)
+            settings.builtInZoomControls = true
+            settings.displayZoomControls = false
+            settings.textZoom = 100
+            settings.allowFileAccess = true
+            settings.allowFileAccessFromFileURLs = true
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            clipToOutline = true
         }
     }
 
@@ -312,6 +370,9 @@ class FloatingPreview(private val context: Context) {
             clockRunnable?.let { clockHandler.removeCallbacks(it) }
             windowManager.removeView(floatingView)
             floatingView = null
+            pendingView?.let { holder?.removeView(it); it.destroy() }
+            pendingView = null
+            holder = null
             webView = null
             isShowing = false
             isInteractive = false

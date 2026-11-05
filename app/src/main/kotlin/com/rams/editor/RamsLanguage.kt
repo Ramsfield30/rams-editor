@@ -60,11 +60,11 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
     }
 
     override fun insert(start: CharPosition, end: CharPosition, insertedContent: CharSequence) {
-        schedule(250L)
+        schedule(120L)
     }
 
     override fun delete(start: CharPosition, end: CharPosition, deletedContent: CharSequence) {
-        schedule(250L)
+        schedule(120L)
     }
 
     override fun rerun() {
