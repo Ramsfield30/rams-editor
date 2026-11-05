@@ -30,6 +30,8 @@ class FloatingPreview(private val context: Context) {
     private var webView: WebView? = null
     private var holder: FrameLayout? = null
     private var pendingView: WebView? = null
+    private var spareView: WebView? = null
+    private var loadId = 0
     private var isShowing = false
     private var isInteractive = false
     private var currentBaseUrl: String? = null
@@ -128,40 +130,49 @@ class FloatingPreview(private val context: Context) {
         if (baseUrl != null) currentBaseUrl = baseUrl
         val front = webView ?: return
         val host = holder ?: return
-
-        // A newer edit replaces any page that is still loading in the background
-        pendingView?.let { old ->
-            host.removeView(old)
-            old.destroy()
-            pendingView = null
-        }
-
         val html = injectViewport(htmlContent)
         val base = currentBaseUrl
+        val id = ++loadId
 
         val startLoad: (Int) -> Unit = { scrollY ->
-            val back = newBackView(front)
-            pendingView = back
-            back.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    val v = view ?: return
-                    if (v !== pendingView) return
-                    if (scrollY > 0) v.evaluateJavascript("window.scrollTo(0,$scrollY)", null)
-                    // Give the page a moment to lay out, then swap so you never see a blank page
-                    v.postDelayed({
-                        if (v !== pendingView) return@postDelayed
-                        if (scrollY > 0) v.evaluateJavascript("window.scrollTo(0,$scrollY)", null)
-                        host.removeView(front)
-                        front.destroy()
-                        webView = v
-                        pendingView = null
-                        applyVirtualScreen(host.width, host.height)
-                    }, 150)
+            if (id == loadId && webView === front) {
+                val back = pendingView ?: (spareView ?: newBackView()).also {
+                    spareView = null
+                    matchFront(it, front)
+                    host.addView(it, 0)
                 }
+                pendingView = back
+                back.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        val v = view ?: return
+                        if (id != loadId || v !== pendingView) return
+                        if (scrollY > 0) v.evaluateJavascript("window.scrollTo(0,$scrollY)", null)
+                        val swap = Runnable {
+                            if (id != loadId || v !== pendingView) return@Runnable
+                            host.removeView(front)
+                            spareView = front
+                            webView = v
+                            pendingView = null
+                            applyVirtualScreen(host.width, host.height)
+                        }
+                        if (android.os.Build.VERSION.SDK_INT >= 23) {
+                            // Swap exactly when the new page has been drawn
+                            v.postVisualStateCallback(
+                                id.toLong(),
+                                object : WebView.VisualStateCallback() {
+                                    override fun onComplete(requestId: Long) {
+                                        swap.run()
+                                    }
+                                }
+                            )
+                        } else {
+                            v.postDelayed(swap, 120)
+                        }
+                    }
+                }
+                back.loadDataWithBaseURL(base, html, "text/html", "UTF-8", null)
             }
-            host.addView(back, 0)
-            back.loadDataWithBaseURL(base, html, "text/html", "UTF-8", null)
         }
 
         if (!keepScroll) {
@@ -171,20 +182,12 @@ class FloatingPreview(private val context: Context) {
         front.evaluateJavascript(
             "(function(){return Math.round(window.pageYOffset||document.documentElement.scrollTop||0)})()"
         ) { value ->
-            if (webView === front) {
-                startLoad(value?.trim('"')?.toDoubleOrNull()?.toInt() ?: 0)
-            }
+            startLoad(value?.trim('"')?.toDoubleOrNull()?.toInt() ?: 0)
         }
     }
 
-    private fun newBackView(front: WebView): WebView {
-        val flp = front.layoutParams as FrameLayout.LayoutParams
+    private fun newBackView(): WebView {
         return WebView(context).apply {
-            layoutParams = FrameLayout.LayoutParams(flp.width, flp.height)
-            pivotX = 0f
-            pivotY = 0f
-            scaleX = front.scaleX
-            scaleY = front.scaleY
             webChromeClient = ConsoleLog.chromeClient()
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -199,6 +202,15 @@ class FloatingPreview(private val context: Context) {
             settings.cacheMode = WebSettings.LOAD_NO_CACHE
             clipToOutline = true
         }
+    }
+
+    private fun matchFront(back: WebView, front: WebView) {
+        val flp = front.layoutParams as FrameLayout.LayoutParams
+        back.layoutParams = FrameLayout.LayoutParams(flp.width, flp.height)
+        back.pivotX = 0f
+        back.pivotY = 0f
+        back.scaleX = front.scaleX
+        back.scaleY = front.scaleY
     }
 
     fun updateCss(cssContent: String, fileName: String) {
@@ -372,6 +384,8 @@ class FloatingPreview(private val context: Context) {
             floatingView = null
             pendingView?.let { holder?.removeView(it); it.destroy() }
             pendingView = null
+            spareView?.destroy()
+            spareView = null
             holder = null
             webView = null
             isShowing = false

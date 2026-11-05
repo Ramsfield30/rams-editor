@@ -265,7 +265,7 @@ class MainActivity : AppCompatActivity() {
             if (tabAtSchedule == currentTabIndex) updatePreview(code)
         }
         val isCss = openTabs.getOrNull(currentTabIndex)?.name?.endsWith(".css") == true
-        previewHandler.postDelayed(previewRunnable!!, if (isCss) 200L else 700L)
+        previewHandler.postDelayed(previewRunnable!!, if (isCss) 150L else 300L)
     }
 
     private fun updatePreview(code: String) {
@@ -470,6 +470,8 @@ class MainActivity : AppCompatActivity() {
     private fun loadIntoEditor(file: File, onLoaded: () -> Unit) {
         loadToken++
         val code = file.readText()
+        // Colors first, so the text and its colors show up together
+        if (code.length < 400_000) RamsAnalyzeManager.prime(file.name, code)
         codeEditor.setLanguageForFile(file.name)
         codeEditor.setCode(code)
         codeEditor.isEnabled = true

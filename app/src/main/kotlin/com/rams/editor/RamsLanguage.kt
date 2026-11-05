@@ -32,15 +32,21 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
 
 class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
 
-    private companion object {
+    companion object {
         // One shared background thread for all files
-        val worker = Executors.newSingleThreadExecutor()
+        private val worker = Executors.newSingleThreadExecutor()
 
         // Remembers recent results so reopening a file shows colors at once
-        val recent = object : LinkedHashMap<String, Pair<String, ByteArray>>(8, 0.75f, true) {
+        private val recent = object : LinkedHashMap<String, Pair<String, ByteArray>>(8, 0.75f, true) {
             override fun removeEldestEntry(
                 eldest: MutableMap.MutableEntry<String, Pair<String, ByteArray>>?
             ): Boolean = size > 6
+        }
+
+        // Work out the colors now, so they are ready the moment the text appears
+        fun prime(fileName: String, code: String) {
+            val kinds = SyntaxHighlighter.analyze(code, fileName)
+            synchronized(recent) { recent[fileName + ":" + code.length] = Pair(code, kinds) }
         }
     }
 
