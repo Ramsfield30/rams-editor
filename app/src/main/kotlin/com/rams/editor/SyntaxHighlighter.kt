@@ -30,6 +30,11 @@ object SyntaxHighlighter {
 
     fun build(code: String, name: String): SpannableStringBuilder = SpannableStringBuilder(code)
 
-    // One color number per character
-    fun analyze(code: String, name: String): ByteArray = FastHighlighter.analyze(code, name)
+    // One color number per character. If anything goes wrong, show plain text.
+    fun analyze(code: String, name: String): ByteArray = try {
+        FastHighlighter.analyze(code, name)
+    } catch (t: Throwable) {
+        CrashLog.note(t)
+        ByteArray(code.length)
+    }
 }

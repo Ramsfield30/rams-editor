@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashLog.install(this)
         setContentView(R.layout.activity_main)
 
         codeEditor = findViewById(R.id.codeEditor)
@@ -220,10 +221,16 @@ class MainActivity : AppCompatActivity() {
                 codeEditor.post { codeEditor.refreshMatches() }
         }
 
-        val hasSession = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
-            .getString("last_project", null) != null
-        if (hasSession) restoreLastSession()
-        if (openTabs.isEmpty()) openProjectMainFile()
+        // After a crash, start empty ("safe mode") so you can read the report
+        if (CrashLog.hasCrash(this)) {
+            showEmptyState()
+        } else {
+            val hasSession = getSharedPreferences("rams_session", Context.MODE_PRIVATE)
+                .getString("last_project", null) != null
+            if (hasSession) restoreLastSession()
+            if (openTabs.isEmpty()) openProjectMainFile()
+        }
+        CrashLog.showIfAny(this)
 
         onBackPressedDispatcher.addCallback(
             this,
