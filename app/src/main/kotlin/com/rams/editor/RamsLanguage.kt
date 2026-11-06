@@ -13,7 +13,6 @@ import io.github.rosemoe.sora.lang.styling.TextStyle
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.ContentReference
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
-import java.util.LinkedHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -24,13 +23,18 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
 
     override fun getAnalyzeManager(): AnalyzeManager = analyzer
 
+    // Switch to another file without replacing the language (keeps the editor steady)
+    fun setFile(name: String) {
+        analyzer.fileName = name
+    }
+
     override fun destroy() {
         analyzer.destroy()
         super.destroy()
     }
 }
 
-class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
+class RamsAnalyzeManager(var fileName: String) : AnalyzeManager {
 
     companion object {
         // One shared background thread for all files
@@ -42,6 +46,9 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
                 eldest: MutableMap.MutableEntry<String, Pair<String, ByteArray>>?
             ): Boolean = size > 6
         }
+
+        // Called after new colors have been handed to the editor
+        var onStylesApplied: (() -> Unit)? = null
 
         // Work out the colors now, so they are ready the moment the text appears
         fun prime(fileName: String, code: String) {
@@ -67,11 +74,11 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
     }
 
     override fun insert(start: CharPosition, end: CharPosition, insertedContent: CharSequence) {
-        schedule(120L)
+        schedule(250L)
     }
 
     override fun delete(start: CharPosition, end: CharPosition, deletedContent: CharSequence) {
-        schedule(120L)
+        schedule(250L)
     }
 
     override fun rerun() {
@@ -90,16 +97,23 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
         mainHandler.postDelayed(rerunTask, delayMs)
     }
 
+    private fun applied() {
+        // Posted after the editor's own queued update, so the editor is colored when this runs
+        mainHandler.post { onStylesApplied?.invoke() }
+    }
+
     private fun startAnalysis() {
         val ref = content ?: return
         val code = ref.reference.toString()
+        val name = fileName
         val myVersion = version.incrementAndGet()
-        val key = fileName + ":" + code.length
+        val key = name + ":" + code.length
 
         val hit = synchronized(recent) { recent[key] }
         if (hit != null && hit.first == code) {
             try {
                 receiver?.setStyles(this, buildStyles(code, hit.second))
+                applied()
             } catch (t: Throwable) {
                 CrashLog.note(t)
             }
@@ -109,13 +123,16 @@ class RamsAnalyzeManager(private val fileName: String) : AnalyzeManager {
         worker.execute {
             try {
                 if (myVersion != version.get()) return@execute
-                val kinds = SyntaxHighlighter.analyze(code, fileName)
+                val kinds = SyntaxHighlighter.analyze(code, name)
                 synchronized(recent) { recent[key] = Pair(code, kinds) }
                 if (myVersion != version.get()) return@execute
                 val styles = buildStyles(code, kinds)
                 mainHandler.post {
                     try {
-                        if (myVersion == version.get()) receiver?.setStyles(this, styles)
+                        if (myVersion == version.get()) {
+                            receiver?.setStyles(this, styles)
+                            applied()
+                        }
                     } catch (t: Throwable) {
                         CrashLog.note(t)
                     }
