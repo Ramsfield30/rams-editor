@@ -173,22 +173,127 @@ class CodeEditor @JvmOverloads constructor(
         animate().alpha(1f).setDuration(60).start()
     }
 
-    // ---- Find / Replace: switched off for now, comes back in a later step ----
+    // ---- Find / Replace ----
     var onFindResult: ((Int, Int) -> Unit)? = null
     var findCase = false
     var findWord = false
     var findRegex = false
+    private var findQuery = ""
+    private var findPattern: java.util.regex.Pattern? = null
+    private var matchStarts: List<Int> = emptyList()
+    private var matchEnds: List<Int> = emptyList()
+    private var matchIndex = -1
 
-    fun find(query: String) {
-        onFindResult?.invoke(0, 0)
+    private fun buildFindPattern(): java.util.regex.Pattern? {
+        if (findQuery.isEmpty()) return null
+        return try {
+            var p = if (findRegex) findQuery else java.util.regex.Pattern.quote(findQuery)
+            if (findWord) p = "\\b(?:$p)\\b"
+            java.util.regex.Pattern.compile(
+                p, if (findCase) 0 else java.util.regex.Pattern.CASE_INSENSITIVE
+            )
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    fun refreshMatches(fromCursor: Boolean = false) {}
-    fun findNext() {}
-    fun findPrev() {}
-    fun replaceCurrent(replacement: String) {}
-    fun replaceAll(replacement: String): Int = 0
+    fun find(query: String) {
+        findQuery = query
+        refreshMatches(fromCursor = true)
+    }
+
+    fun refreshMatches(fromCursor: Boolean = false) {
+        val s = text.toString()
+        val p = buildFindPattern()
+        findPattern = p
+        val starts = ArrayList<Int>()
+        val ends = ArrayList<Int>()
+        if (p != null) {
+            val m = p.matcher(s)
+            while (m.find() && starts.size < 20000) {
+                if (m.end() > m.start()) {
+                    starts.add(m.start())
+                    ends.add(m.end())
+                }
+            }
+        }
+        matchStarts = starts
+        matchEnds = ends
+        matchIndex = when {
+            starts.isEmpty() -> -1
+            fromCursor -> starts.indexOfFirst { it >= selectionStart }
+                .let { if (it < 0) 0 else it }
+            else -> matchIndex.coerceIn(0, starts.size - 1)
+        }
+        if (fromCursor && matchIndex >= 0) selectCurrentMatch()
+        val invalid = findQuery.isNotEmpty() && p == null
+        onFindResult?.invoke(matchIndex + 1, if (invalid) -1 else starts.size)
+    }
+
+    // Selects the current match and scrolls it into view
+    private fun selectCurrentMatch() {
+        if (matchIndex < 0 || matchIndex >= matchStarts.size) return
+        val a = text.indexer.getCharPosition(matchStarts[matchIndex])
+        val b = text.indexer.getCharPosition(matchEnds[matchIndex])
+        setSelectionRegion(a.line, a.column, b.line, b.column)
+    }
+
+    fun findNext() = stepMatch(1)
+    fun findPrev() = stepMatch(-1)
+
+    private fun stepMatch(dir: Int) {
+        if (matchStarts.isEmpty()) return
+        matchIndex = (matchIndex + dir + matchStarts.size) % matchStarts.size
+        selectCurrentMatch()
+        onFindResult?.invoke(matchIndex + 1, matchStarts.size)
+    }
+
+    fun replaceCurrent(replacement: String) {
+        val p = findPattern ?: return
+        if (matchIndex < 0 || matchIndex >= matchStarts.size) return
+        val s = matchStarts[matchIndex]
+        val e = matchEnds[matchIndex]
+        val found = text.subSequence(s, e).toString()
+        val out = if (findRegex) {
+            try { p.matcher(found).replaceFirst(replacement) } catch (ex: Exception) { replacement }
+        } else replacement
+        val a = text.indexer.getCharPosition(s)
+        val b = text.indexer.getCharPosition(e)
+        text.replace(a.line, a.column, b.line, b.column, out)
+        setSelection(s + out.length)
+        refreshMatches(fromCursor = true)
+    }
+
+    fun replaceAll(replacement: String): Int {
+        val p = findPattern ?: return 0
+        val m = p.matcher(text.toString())
+        val buf = StringBuffer()
+        var n = 0
+        try {
+            val repl = if (findRegex) replacement
+                else java.util.regex.Matcher.quoteReplacement(replacement)
+            while (m.find()) {
+                if (m.end() == m.start()) continue
+                n++
+                m.appendReplacement(buf, repl)
+            }
+            if (n == 0) return 0
+            m.appendTail(buf)
+        } catch (ex: Exception) {
+            return 0
+        }
+        val end = text.indexer.getCharPosition(text.length)
+        text.replace(0, 0, end.line, end.column, buf.toString())
+        refreshMatches(fromCursor = true)
+        return n
+    }
+
     fun clearFind() {
+        findQuery = ""
+        findPattern = null
+        matchStarts = emptyList()
+        matchEnds = emptyList()
+        matchIndex = -1
         onFindResult?.invoke(0, 0)
     }
 }

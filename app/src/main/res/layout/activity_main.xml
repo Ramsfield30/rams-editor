@@ -364,6 +364,26 @@
             </HorizontalScrollView>
 
             <TextView
+                android:id="@+id/keyUndo"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="↶"
+                android:textColor="#CCCCCC"
+                android:textSize="18sp"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
+                android:id="@+id/keyRedo"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="↷"
+                android:textColor="#CCCCCC"
+                android:textSize="18sp"
+                android:background="?android:attr/selectableItemBackground"/>
+
+            <TextView
                 android:id="@+id/keyFind"
                 android:layout_width="44dp"
                 android:layout_height="match_parent"

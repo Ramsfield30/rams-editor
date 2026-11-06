@@ -806,6 +806,8 @@ class MainActivity : AppCompatActivity() {
         bindRepeat(findViewById(R.id.keyDown)) { move(0, 1) }
         findViewById<TextView>(R.id.keyGoto).setOnClickListener { showGoToLine() }
         setupFindPanel()
+        findViewById<TextView>(R.id.keyUndo).setOnClickListener { codeEditor.undo() }
+        findViewById<TextView>(R.id.keyRedo).setOnClickListener { codeEditor.redo() }
     }
 
     // One tap moves once. Holding the key repeats it.
