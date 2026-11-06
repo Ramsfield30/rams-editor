@@ -146,6 +146,7 @@ class DeviceEmulatorActivity : AppCompatActivity() {
         heightInput.setOnEditorActionListener(onDone)
 
         buildChips()
+        loadBreakpoints()
         setupHandles()
 
         // Re-fit whenever the stage changes size
@@ -235,6 +236,83 @@ class DeviceEmulatorActivity : AppCompatActivity() {
             }
             chipRow.addView(chip)
             chipViews.add(chip)
+        }
+    }
+
+    // Looks for @media widths in your CSS and adds a chip for each one
+    private fun loadBreakpoints() {
+        Thread {
+            val found = java.util.TreeSet<Int>()
+            val re = Regex(
+                "\\(\\s*(?:min|max)-width\\s*:\\s*(\\d+(?:\\.\\d+)?)\\s*(px|em|rem)\\s*\\)",
+                RegexOption.IGNORE_CASE
+            )
+            fun scan(text: String) {
+                re.findAll(text).forEach { m ->
+                    val v = m.groupValues[1].toDouble()
+                    val px = if (m.groupValues[2].lowercase() == "px") v else v * 16
+                    val w = px.toInt()
+                    if (w in 200..4000) found.add(w)
+                }
+            }
+            try {
+                scan(PreviewHolder.html)
+                val root = LocalServer.rootDir
+                if (root != null) {
+                    var count = 0
+                    root.walkTopDown()
+                        .maxDepth(4)
+                        .onEnter {
+                            it == root || (it.name != "node_modules" && !it.name.startsWith("."))
+                        }
+                        .forEach { f ->
+                            if (f.isFile && f.name.endsWith(".css") &&
+                                f.length() < 600_000 && count < 30
+                            ) {
+                                count++
+                                scan(f.readText())
+                            }
+                        }
+                }
+            } catch (e: Exception) {
+                CrashLog.note(e)
+            }
+            runOnUiThread { if (!isFinishing) addBreakpointChips(found.toList()) }
+        }.start()
+    }
+
+    private fun addBreakpointChips(list: List<Int>) {
+        if (list.isEmpty()) return
+        // A thin divider between the size presets and your own breakpoints
+        val sep = View(this).apply {
+            setBackgroundColor(0xFF8A94A6.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                (2 * density).toInt(), (30 * density).toInt()
+            ).apply {
+                marginStart = (4 * density).toInt()
+                marginEnd = (14 * density).toInt()
+            }
+        }
+        chipRow.addView(sep)
+        list.forEach { bp ->
+            val chip = TextView(this).apply {
+                text = "⇔ $bp"
+                textSize = 15f
+                setTextColor(0xFF1F2430.toInt())
+                gravity = Gravity.CENTER
+                setPadding((14 * density).toInt(), 0, (14 * density).toInt(), 0)
+                background = rounded(0xFFFFFFFF.toInt(), 0xFF2196F3.toInt(), 1.5f, 10f)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, (46 * density).toInt()
+                ).apply { marginEnd = (10 * density).toInt() }
+                setOnClickListener {
+                    deviceName = "Responsive"
+                    cssW = if (cssW == bp) bp - 1 else bp
+                    refreshInputs()
+                    applySize()
+                }
+            }
+            chipRow.addView(chip)
         }
     }
 

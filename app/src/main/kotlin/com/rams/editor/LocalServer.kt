@@ -21,6 +21,9 @@ object LocalServer {
     val isRunning: Boolean
         get() = serverSocket?.isClosed == false
 
+    val rootDir: File?
+        get() = root
+
     @Synchronized
     fun start(rootDir: File): Int {
         root = rootDir

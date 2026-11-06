@@ -233,9 +233,24 @@ class CodeEditor @JvmOverloads constructor(
     // Selects the current match and scrolls it into view
     private fun selectCurrentMatch() {
         if (matchIndex < 0 || matchIndex >= matchStarts.size) return
+        // Remember which box you were typing in, so the editor doesn't keep the cursor
+        val typingIn = activityOrNull()?.currentFocus
         val a = text.indexer.getCharPosition(matchStarts[matchIndex])
         val b = text.indexer.getCharPosition(matchEnds[matchIndex])
         setSelectionRegion(a.line, a.column, b.line, b.column)
+        if (typingIn is android.widget.EditText) {
+            typingIn.requestFocus()
+            typingIn.post { typingIn.requestFocus() }
+        }
+    }
+
+    private fun activityOrNull(): android.app.Activity? {
+        var c: Context? = context
+        while (c is android.content.ContextWrapper) {
+            if (c is android.app.Activity) return c
+            c = c.baseContext
+        }
+        return null
     }
 
     fun findNext() = stepMatch(1)

@@ -10,6 +10,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ScrollView
@@ -37,6 +38,9 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         supportActionBar?.hide()
         setContentView(R.layout.activity_full_preview)
 
+        // Lifts the console above the keyboard
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         val title = findViewById<TextView>(R.id.previewTitle)
         val subtitle = findViewById<TextView>(R.id.previewSubtitle)
 
@@ -48,7 +52,7 @@ class FullScreenPreviewActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
@@ -155,6 +159,30 @@ class FullScreenPreviewActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.fsConsoleClear).setOnClickListener { ConsoleLog.clear() }
         findViewById<TextView>(R.id.fsConsoleClose).setOnClickListener {
             panel.visibility = View.GONE
+        }
+
+        // Type a line of JavaScript and run it in the page
+        val input = findViewById<EditText>(R.id.fsConsoleInput)
+        fun runCommand() {
+            ConsoleRunner.run(webView, input.text.toString())
+            input.setText("")
+        }
+        input.setOnEditorActionListener { _, _, _ ->
+            runCommand()
+            true
+        }
+        findViewById<TextView>(R.id.fsConsoleRun).setOnClickListener { runCommand() }
+        findViewById<TextView>(R.id.fsConsoleUp).setOnClickListener {
+            ConsoleRunner.previous()?.let {
+                input.setText(it)
+                input.setSelection(it.length)
+            }
+        }
+        findViewById<TextView>(R.id.fsConsoleDown).setOnClickListener {
+            ConsoleRunner.next()?.let {
+                input.setText(it)
+                input.setSelection(it.length)
+            }
         }
     }
 

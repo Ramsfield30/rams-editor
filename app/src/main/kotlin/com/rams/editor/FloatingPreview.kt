@@ -92,7 +92,7 @@ class FloatingPreview(private val context: Context) {
             settings.textZoom = 100
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
             clipToOutline = true
             loadDataWithBaseURL(
                 currentBaseUrl,
@@ -199,7 +199,7 @@ class FloatingPreview(private val context: Context) {
             settings.textZoom = 100
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
             clipToOutline = true
         }
     }
