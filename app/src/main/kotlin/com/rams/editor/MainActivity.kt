@@ -473,6 +473,7 @@ class MainActivity : AppCompatActivity() {
         // Colors first, so the text and its colors show up together
         if (code.length < 400_000) RamsAnalyzeManager.prime(file.name, code)
         codeEditor.setLanguageForFile(file.name)
+        codeEditor.hideUntilColored()
         codeEditor.setCode(code)
         codeEditor.isEnabled = true
         hasUnsavedChanges = false

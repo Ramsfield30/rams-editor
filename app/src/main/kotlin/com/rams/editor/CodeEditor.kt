@@ -25,24 +25,29 @@ class CodeEditor @JvmOverloads constructor(
 
     var tabSize: Int = 4
         set(value) {
+            val changed = field != value
             field = value
-            tabWidth = value
+            if (changed) tabWidth = value
         }
 
     var showLineNumbers: Boolean = true
         set(value) {
+            val changed = field != value
             field = value
-            isLineNumberEnabled = value
+            if (changed) isLineNumberEnabled = value
         }
 
     var showActiveLine: Boolean = true
         set(value) {
+            val changed = field != value
             field = value
-            colorScheme.setColor(
-                EditorColorScheme.CURRENT_LINE,
-                if (value) Color.parseColor("#282828") else Color.TRANSPARENT
-            )
-            invalidate()
+            if (changed) {
+                colorScheme.setColor(
+                    EditorColorScheme.CURRENT_LINE,
+                    if (value) Color.parseColor("#282828") else Color.TRANSPARENT
+                )
+                invalidate()
+            }
         }
 
     // Not wired up yet (coming back in a later step)
@@ -67,25 +72,39 @@ class CodeEditor @JvmOverloads constructor(
         isWordwrap = false
         tabWidth = 4
         isLineNumberEnabled = true
+        RamsAnalyzeManager.onStylesApplied = { reveal() }
     }
 
-    // The old editor blocked typing when disabled; do the same here
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
-        isEditable = enabled
+        if (isEditable != enabled) isEditable = enabled
     }
 
+    private var fontSp = 14
+
     fun setFontSizeSp(sp: Int) {
-        setTextSize(sp.toFloat())
+        if (sp != fontSp) {
+            fontSp = sp
+            setTextSize(sp.toFloat())
+        }
     }
 
     fun setWordWrap(wrap: Boolean) {
-        isWordwrap = wrap
+        if (isWordwrap != wrap) isWordwrap = wrap
     }
 
     // ---- Text in and out ----
+    private var currentLanguage: RamsLanguage? = null
+
     fun setLanguageForFile(name: String) {
-        setEditorLanguage(RamsLanguage(name))
+        val lang = currentLanguage
+        if (lang != null) {
+            lang.setFile(name)
+        } else {
+            val created = RamsLanguage(name)
+            currentLanguage = created
+            setEditorLanguage(created)
+        }
     }
 
     fun getCode(): String = text.toString()
@@ -136,6 +155,22 @@ class CodeEditor @JvmOverloads constructor(
         val l = (line - 1).coerceIn(0, text.lineCount - 1)
         requestFocus()
         setSelection(l, 0)
+    }
+
+    // ---- Hide the editor while a new file is colored ----
+    private var hiding = false
+
+    // Keeps plain text from flashing while a new file gets its colors
+    fun hideUntilColored() {
+        hiding = true
+        alpha = 0f
+        postDelayed({ reveal() }, 400)
+    }
+
+    fun reveal() {
+        if (!hiding) return
+        hiding = false
+        animate().alpha(1f).setDuration(60).start()
     }
 
     // ---- Find / Replace: switched off for now, comes back in a later step ----
