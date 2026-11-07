@@ -107,6 +107,34 @@ class CodeEditor @JvmOverloads constructor(
         }
     }
 
+    // Typing > after an opening tag adds the closing tag, like <div> -> <div></div>
+    override fun commitText(text: CharSequence?, applyAutoIndent: Boolean) {
+        super.commitText(text, applyAutoIndent)
+        if (autoCloseEnabled && text != null && text.length == 1 && text[0] == '>') {
+            closeTagAtCursor()
+        }
+    }
+
+    private val openTagRegex = Regex("<([a-zA-Z][a-zA-Z0-9-]*)(?:\\s[^<>]*)?>$")
+    private val voidTagNames = setOf(
+        "br", "hr", "img", "input", "meta", "link", "area", "base",
+        "col", "embed", "param", "source", "track", "wbr"
+    )
+
+    private fun closeTagAtCursor() {
+        val lineIndex = cursor.leftLine
+        val col = cursor.leftColumn
+        val line = this.text.getLine(lineIndex).toString()
+        if (col <= 0 || col > line.length) return
+        val before = line.substring(0, col)
+        if (before.endsWith("/>")) return
+        val name = openTagRegex.find(before)?.groupValues?.get(1) ?: return
+        if (name.lowercase() in voidTagNames) return
+        if (line.substring(col).startsWith("</$name")) return
+        this.text.insert(lineIndex, col, "</$name>")
+        setSelection(lineIndex, col)
+    }
+
     fun getCode(): String = text.toString()
 
     fun setCode(code: String) {

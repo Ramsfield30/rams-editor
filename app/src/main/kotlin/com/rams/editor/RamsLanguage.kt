@@ -6,12 +6,16 @@ import android.os.Looper
 import io.github.rosemoe.sora.lang.EmptyLanguage
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
 import io.github.rosemoe.sora.lang.analysis.StyleReceiver
+import io.github.rosemoe.sora.lang.smartEnter.NewlineHandleResult
+import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler
 import io.github.rosemoe.sora.lang.styling.MappedSpans
 import io.github.rosemoe.sora.lang.styling.Span
 import io.github.rosemoe.sora.lang.styling.Styles
 import io.github.rosemoe.sora.lang.styling.TextStyle
 import io.github.rosemoe.sora.text.CharPosition
+import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentReference
+import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -20,6 +24,16 @@ import java.util.concurrent.atomic.AtomicInteger
 class RamsLanguage(fileName: String) : EmptyLanguage() {
 
     private val analyzer = RamsAnalyzeManager(fileName)
+
+    // One set of bracket and quote pairs for this editor only (never share it between editors)
+    private val pairs = SymbolPairMatch.DefaultSymbolPairs()
+
+    private val newlineHandlers: Array<NewlineHandler> =
+        arrayOf(BraceNewlineHandler(), TagNewlineHandler())
+
+    override fun getSymbolPairs(): SymbolPairMatch = pairs
+
+    override fun getNewlineHandlers(): Array<NewlineHandler> = newlineHandlers
 
     override fun getAnalyzeManager(): AnalyzeManager = analyzer
 
@@ -173,5 +187,84 @@ class RamsAnalyzeManager(var fileName: String) : AnalyzeManager {
         if (col == 0) builder.add(line, Span.obtain(0, styleFor(0)))
         builder.determine(line)
         return Styles(builder.build())
+    }
+}
+
+// Pressing Enter right after { [ or (  -> indent the next line.
+// If the matching closer is already there, put it on its own line below.
+private class BraceNewlineHandler : NewlineHandler {
+
+    override fun matchesRequirement(text: Content, position: CharPosition, style: Styles?): Boolean {
+        val line = text.getLine(position.line).toString()
+        val col = position.column
+        if (col <= 0 || col > line.length) return false
+        val before = line[col - 1]
+        return before == '{' || before == '[' || before == '('
+    }
+
+    override fun handleNewline(
+        text: Content, position: CharPosition, style: Styles?, tabSize: Int
+    ): NewlineHandleResult {
+        val line = text.getLine(position.line).toString()
+        val col = position.column
+        val indent = line.takeWhile { it == ' ' || it == '\t' }
+        val unit = " ".repeat(if (tabSize > 0) tabSize else 4)
+        val before = line[col - 1]
+        val after = if (col < line.length) line[col] else ' '
+        val closer = when (before) {
+            '{' -> '}'
+            '[' -> ']'
+            else -> ')'
+        }
+        val sb = StringBuilder()
+        sb.append("\n").append(indent).append(unit)
+        if (after == closer) {
+            val tail = "\n" + indent
+            sb.append(tail)
+            return NewlineHandleResult(sb, tail.length)
+        }
+        return NewlineHandleResult(sb, 0)
+    }
+}
+
+// Pressing Enter right after an opening HTML tag -> indent the next line.
+// If the closing tag is already there, put it on its own line below.
+private class TagNewlineHandler : NewlineHandler {
+
+    private val voidTags = setOf(
+        "br", "hr", "img", "input", "meta", "link", "area", "base",
+        "col", "embed", "param", "source", "track", "wbr"
+    )
+    private val openTag = Regex("<([a-zA-Z][a-zA-Z0-9-]*)(?:\\s[^<>]*)?>$")
+
+    private fun openedTag(before: String): String? {
+        if (before.endsWith("/>")) return null
+        val m = openTag.find(before) ?: return null
+        val name = m.groupValues[1].lowercase()
+        return if (name in voidTags) null else name
+    }
+
+    override fun matchesRequirement(text: Content, position: CharPosition, style: Styles?): Boolean {
+        val line = text.getLine(position.line).toString()
+        val col = position.column
+        if (col <= 0 || col > line.length) return false
+        return openedTag(line.substring(0, col)) != null
+    }
+
+    override fun handleNewline(
+        text: Content, position: CharPosition, style: Styles?, tabSize: Int
+    ): NewlineHandleResult {
+        val line = text.getLine(position.line).toString()
+        val col = position.column
+        val indent = line.takeWhile { it == ' ' || it == '\t' }
+        val unit = " ".repeat(if (tabSize > 0) tabSize else 4)
+        val sb = StringBuilder()
+        sb.append("\n").append(indent).append(unit)
+        if (line.substring(col).startsWith("</")) {
+            val tail = "\n" + indent
+            sb.append(tail)
+            return NewlineHandleResult(sb, tail.length)
+        }
+        return NewlineHandleResult(sb, 0)
     }
 }
