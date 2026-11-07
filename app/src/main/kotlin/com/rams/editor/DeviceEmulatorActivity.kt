@@ -117,10 +117,10 @@ class DeviceEmulatorActivity : AppCompatActivity() {
         frame.clipToOutline = true
 
         // White rounded boxes for the device picker and the size fields
-        val box = rounded(0xFFFFFFFF.toInt(), 0xFFB9BFC9.toInt(), 1f, 10f)
+        val box = rounded(0xFF333333.toInt(), 0xFF2196F3.toInt(), 2f, 10f)
         deviceLabel.background = box
-        widthInput.background = rounded(0xFFFFFFFF.toInt(), 0xFFB9BFC9.toInt(), 1f, 10f)
-        heightInput.background = rounded(0xFFFFFFFF.toInt(), 0xFFB9BFC9.toInt(), 1f, 10f)
+        widthInput.background = rounded(0xFF333333.toInt(), 0xFF4A4A4A.toInt(), 1f, 10f)
+        heightInput.background = rounded(0xFF333333.toInt(), 0xFF4A4A4A.toInt(), 1f, 10f)
 
         findViewById<View>(R.id.emuClose).setOnClickListener { finish() }
         findViewById<View>(R.id.emuHelp).setOnClickListener { showHelp() }
@@ -182,7 +182,7 @@ class DeviceEmulatorActivity : AppCompatActivity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding((14 * density).toInt(), 0, (14 * density).toInt(), 0)
-                background = rounded(0xFFFFFFFF.toInt(), 0xFFD3D7DE.toInt(), 1f, 10f)
+                background = rounded(0xFF333333.toInt(), 0xFF4A4A4A.toInt(), 1f, 10f)
                 elevation = 2 * density
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, (46 * density).toInt()
@@ -194,9 +194,9 @@ class DeviceEmulatorActivity : AppCompatActivity() {
                     text = "4K"
                     textSize = 11f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(0xFF1F2430.toInt())
+                    setTextColor(0xFFE6E6E6.toInt())
                     gravity = Gravity.CENTER
-                    background = rounded(0x00000000, 0xFF1F2430.toInt(), 1.5f, 4f)
+                    background = rounded(0x00000000, 0xFFE6E6E6.toInt(), 1.5f, 4f)
                     setPadding((4 * density).toInt(), 0, (4 * density).toInt(), 0)
                     layoutParams = LinearLayout.LayoutParams(
                         (28 * density).toInt(), (20 * density).toInt()
@@ -220,7 +220,7 @@ class DeviceEmulatorActivity : AppCompatActivity() {
             }
 
             val divider = View(this).apply {
-                setBackgroundColor(0xFFC5CAD3.toInt())
+                setBackgroundColor(0xFF555555.toInt())
                 layoutParams = LinearLayout.LayoutParams(
                     (1 * density).toInt().coerceAtLeast(1), (26 * density).toInt()
                 ).apply {
@@ -233,7 +233,7 @@ class DeviceEmulatorActivity : AppCompatActivity() {
             val label = TextView(this).apply {
                 text = p.label
                 textSize = 15f
-                setTextColor(0xFF1F2430.toInt())
+                setTextColor(0xFFE6E6E6.toInt())
             }
             chip.addView(label)
 
@@ -307,10 +307,10 @@ class DeviceEmulatorActivity : AppCompatActivity() {
             val chip = TextView(this).apply {
                 text = "⇔ $bp"
                 textSize = 15f
-                setTextColor(0xFF1F2430.toInt())
+                setTextColor(0xFFE6E6E6.toInt())
                 gravity = Gravity.CENTER
                 setPadding((14 * density).toInt(), 0, (14 * density).toInt(), 0)
-                background = rounded(0xFFFFFFFF.toInt(), 0xFF2196F3.toInt(), 1.5f, 10f)
+                background = rounded(0xFF333333.toInt(), 0xFF2196F3.toInt(), 1.5f, 10f)
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, (46 * density).toInt()
                 ).apply { marginEnd = (10 * density).toInt() }
@@ -329,9 +329,9 @@ class DeviceEmulatorActivity : AppCompatActivity() {
     private fun updateChips() {
         chipViews.forEachIndexed { i, v ->
             v.background = if (presets[i].w == cssW)
-                rounded(0xFFFFFFFF.toInt(), 0xFF1F2430.toInt(), 2f, 10f)
+                rounded(0xFF333333.toInt(), 0xFFE6E6E6.toInt(), 2f, 10f)
             else
-                rounded(0xFFFFFFFF.toInt(), 0xFFD3D7DE.toInt(), 1f, 10f)
+                rounded(0xFF333333.toInt(), 0xFF4A4A4A.toInt(), 1f, 10f)
         }
     }
 
