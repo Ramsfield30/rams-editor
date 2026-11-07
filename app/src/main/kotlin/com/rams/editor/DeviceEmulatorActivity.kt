@@ -1,6 +1,8 @@
 package com.rams.editor
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
@@ -12,6 +14,7 @@ import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.webkit.ConsoleMessage
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -20,7 +23,9 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
@@ -72,12 +77,15 @@ class DeviceEmulatorActivity : AppCompatActivity() {
     private var currentScale = 1f
 
     private var density = 1f
+    private var previousListener: (() -> Unit)? = null
+    private var consoleFilter = ConsoleLog.FILTER_ALL
 
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
         setContentView(R.layout.activity_device_emulator)
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         density = resources.displayMetrics.density
 
         webView = findViewById(R.id.emuWebView)
@@ -146,6 +154,7 @@ class DeviceEmulatorActivity : AppCompatActivity() {
         heightInput.setOnEditorActionListener(onDone)
 
         buildChips()
+        setupConsole()
         loadBreakpoints()
         setupHandles()
 
@@ -492,7 +501,101 @@ class DeviceEmulatorActivity : AppCompatActivity() {
         updateChips()
     }
 
+    private fun setupConsole() {
+        val panel = findViewById<LinearLayout>(R.id.emuConsolePanel)
+        val text = findViewById<TextView>(R.id.emuConsoleText)
+        val scroll = findViewById<ScrollView>(R.id.emuConsoleScroll)
+        val button = findViewById<TextView>(R.id.emuConsoleBtn)
+        val normalColor = button.currentTextColor
+
+        val chips = listOf(
+            findViewById<TextView>(R.id.emuFilterAll) to ConsoleLog.FILTER_ALL,
+            findViewById<TextView>(R.id.emuFilterInfo) to ConsoleLog.FILTER_INFO,
+            findViewById<TextView>(R.id.emuFilterWarning) to ConsoleLog.FILTER_WARNING,
+            findViewById<TextView>(R.id.emuFilterError) to ConsoleLog.FILTER_ERROR
+        )
+
+        fun render() {
+            text.text = ConsoleLog.render(consoleFilter)
+            scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+            chips.forEach { (chip, f) ->
+                val selected = f == consoleFilter
+                chip.setBackgroundColor(if (selected) 0xFF37373D.toInt() else 0x00000000)
+                chip.setTextColor(if (selected) android.graphics.Color.WHITE else 0xFFAAAAAA.toInt())
+            }
+            // The button turns red when the page has errors and the console is closed
+            val hasError = ConsoleLog.entries.any {
+                it.level == ConsoleMessage.MessageLevel.ERROR
+            }
+            button.setTextColor(
+                if (hasError && panel.visibility != View.VISIBLE) 0xFFE5533D.toInt() else normalColor
+            )
+        }
+
+        previousListener = ConsoleLog.onChange
+        ConsoleLog.onChange = { runOnUiThread { render() } }
+
+        chips.forEach { (chip, f) ->
+            chip.setOnClickListener {
+                consoleFilter = f
+                render()
+            }
+        }
+
+        button.setOnClickListener {
+            if (panel.visibility == View.VISIBLE) {
+                panel.visibility = View.GONE
+            } else {
+                panel.visibility = View.VISIBLE
+            }
+            render()
+        }
+
+        findViewById<TextView>(R.id.emuConsoleClose).setOnClickListener {
+            panel.visibility = View.GONE
+            render()
+        }
+        findViewById<TextView>(R.id.emuConsoleClear).setOnClickListener { ConsoleLog.clear() }
+        findViewById<TextView>(R.id.emuConsoleCopy).setOnClickListener {
+            val toCopy = ConsoleLog.plainText(consoleFilter)
+            if (toCopy.isEmpty()) {
+                Toast.makeText(this, "Nothing to copy", Toast.LENGTH_SHORT).show()
+            } else {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("console", toCopy))
+                Toast.makeText(this, "Console copied", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Type a line of JavaScript and run it in the page
+        val input = findViewById<EditText>(R.id.emuConsoleInput)
+        fun runCommand() {
+            ConsoleRunner.run(webView, input.text.toString())
+            input.setText("")
+        }
+        input.setOnEditorActionListener { _, _, _ ->
+            runCommand()
+            true
+        }
+        findViewById<TextView>(R.id.emuConsoleRun).setOnClickListener { runCommand() }
+        findViewById<TextView>(R.id.emuConsoleUp).setOnClickListener {
+            ConsoleRunner.previous()?.let {
+                input.setText(it)
+                input.setSelection(it.length)
+            }
+        }
+        findViewById<TextView>(R.id.emuConsoleDown).setOnClickListener {
+            ConsoleRunner.next()?.let {
+                input.setText(it)
+                input.setSelection(it.length)
+            }
+        }
+
+        render()
+    }
+
     override fun onDestroy() {
+        ConsoleLog.onChange = previousListener
         webView.destroy()
         super.onDestroy()
     }
