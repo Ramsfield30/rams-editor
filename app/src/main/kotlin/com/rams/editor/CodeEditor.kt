@@ -54,6 +54,8 @@ class CodeEditor @JvmOverloads constructor(
     var autoCloseEnabled: Boolean = true
     var showIndentGuides: Boolean = true
 
+    private var currentFileName = ""
+
     init {
         val scheme = SchemeDarcula()
         scheme.setColor(EditorColorScheme.WHOLE_BACKGROUND, Color.parseColor("#1E1E1E"))
@@ -97,6 +99,7 @@ class CodeEditor @JvmOverloads constructor(
     private var currentLanguage: RamsLanguage? = null
 
     fun setLanguageForFile(name: String) {
+        currentFileName = name
         val lang = currentLanguage
         if (lang != null) {
             lang.setFile(name)
@@ -110,7 +113,9 @@ class CodeEditor @JvmOverloads constructor(
     // Typing > after an opening tag adds the closing tag, like <div> -> <div></div>
     override fun commitText(text: CharSequence?, applyAutoIndent: Boolean) {
         super.commitText(text, applyAutoIndent)
-        if (autoCloseEnabled && text != null && text.length == 1 && text[0] == '>') {
+        if (autoCloseEnabled && text != null && text.length in 1..30 &&
+            !text.contains('\n') && text[text.length - 1] == '>'
+        ) {
             closeTagAtCursor()
         }
     }
@@ -133,6 +138,184 @@ class CodeEditor @JvmOverloads constructor(
         if (line.substring(col).startsWith("</$name")) return
         this.text.insert(lineIndex, col, "</$name>")
         setSelection(lineIndex, col)
+    }
+
+    // ---- Line tools ----
+    private fun lineText(i: Int): String = text.getLine(i).toString()
+
+    private fun hasSelection(): Boolean = cursor.left != cursor.right
+
+    // The first and last line touched by the cursor or the selection
+    private fun selectedLines(): Pair<Int, Int> {
+        var a = cursor.leftLine
+        var b = cursor.rightLine
+        if (a > b) {
+            val t = a
+            a = b
+            b = t
+        }
+        if (a != b && cursor.rightColumn == 0) b--
+        return Pair(a, b)
+    }
+
+    private fun replaceLines(l1: Int, l2: Int, newText: String) {
+        text.replace(l1, 0, l2, lineText(l2).length, newText)
+    }
+
+    private fun commentKind(): Int =
+        when (currentFileName.substringAfterLast('.', "").lowercase()) {
+            "html", "htm", "xml", "svg" -> 1
+            "css" -> 2
+            else -> 0
+        }
+
+    private fun isCommented(line: String, kind: Int): Boolean {
+        val t = line.trim()
+        return when (kind) {
+            1 -> t.startsWith("<!--") && t.endsWith("-->")
+            2 -> t.startsWith("/*") && t.endsWith("*/")
+            else -> t.startsWith("//")
+        }
+    }
+
+    private fun commentLine(line: String, kind: Int, indent: Int): String {
+        val head = line.substring(0, indent)
+        val rest = line.substring(indent)
+        return when (kind) {
+            1 -> "$head<!-- $rest -->"
+            2 -> "$head/* $rest */"
+            else -> "$head// $rest"
+        }
+    }
+
+    private fun uncommentLine(line: String, kind: Int): String {
+        val lead = line.length - line.trimStart().length
+        val head = line.substring(0, lead)
+        var rest = line.substring(lead)
+        when (kind) {
+            1 -> {
+                rest = rest.removePrefix("<!--").removeSuffix("-->")
+                rest = rest.removePrefix(" ").removeSuffix(" ")
+            }
+            2 -> {
+                rest = rest.removePrefix("/*").removeSuffix("*/")
+                rest = rest.removePrefix(" ").removeSuffix(" ")
+            }
+            else -> rest = rest.removePrefix("//").removePrefix(" ")
+        }
+        return head + rest
+    }
+
+    fun toggleComment() {
+        val (l1, l2) = selectedLines()
+        val kind = commentKind()
+        val lines = (l1..l2).map { lineText(it) }
+        val filled = lines.filter { it.isNotBlank() }
+        if (filled.isEmpty()) return
+        val allCommented = filled.all { isCommented(it, kind) }
+        val indent = filled.minOf { it.length - it.trimStart().length }
+        val sel = hasSelection()
+        val col = cursor.leftColumn
+        val oldLen = lines.first().length
+        val out = lines.map { line ->
+            when {
+                line.isBlank() -> line
+                allCommented -> uncommentLine(line, kind)
+                else -> commentLine(line, kind, indent)
+            }
+        }
+        replaceLines(l1, l2, out.joinToString("\n"))
+        if (sel) {
+            setSelectionRegion(l1, 0, l2, lineText(l2).length)
+        } else {
+            val newLen = lineText(l1).length
+            setSelection(l1, (col + newLen - oldLen).coerceIn(0, newLen))
+        }
+    }
+
+    fun indentLines() {
+        val (l1, l2) = selectedLines()
+        val unit = " ".repeat(tabSize)
+        val sel = hasSelection()
+        val col = cursor.leftColumn
+        val out = (l1..l2).joinToString("\n") { i ->
+            val s = lineText(i)
+            if (s.isEmpty()) s else unit + s
+        }
+        replaceLines(l1, l2, out)
+        if (sel) setSelectionRegion(l1, 0, l2, lineText(l2).length)
+        else setSelection(l1, col + unit.length)
+    }
+
+    fun outdentLines() {
+        val (l1, l2) = selectedLines()
+        val sel = hasSelection()
+        val col = cursor.leftColumn
+        var removedOnFirst = 0
+        val out = (l1..l2).joinToString("\n") { i ->
+            val s = lineText(i)
+            var n = 0
+            while (n < tabSize && n < s.length && s[n] == ' ') n++
+            if (n == 0 && s.startsWith("\t")) n = 1
+            if (i == l1) removedOnFirst = n
+            s.substring(n)
+        }
+        replaceLines(l1, l2, out)
+        if (sel) setSelectionRegion(l1, 0, l2, lineText(l2).length)
+        else setSelection(l1, (col - removedOnFirst).coerceAtLeast(0))
+    }
+
+    fun duplicateLines() {
+        val (l1, l2) = selectedLines()
+        val block = (l1..l2).joinToString("\n") { lineText(it) }
+        val cl = cursor.leftLine
+        val cc = cursor.leftColumn
+        text.insert(l2, lineText(l2).length, "\n" + block)
+        setSelection(cl + (l2 - l1 + 1), cc)
+    }
+
+    fun deleteLines() {
+        val (l1, l2) = selectedLines()
+        val last = text.lineCount - 1
+        if (l2 < last) {
+            text.replace(l1, 0, l2 + 1, 0, "")
+            setSelection(l1.coerceAtMost(text.lineCount - 1), 0)
+        } else if (l1 > 0) {
+            val prevLen = lineText(l1 - 1).length
+            text.replace(l1 - 1, prevLen, l2, lineText(l2).length, "")
+            setSelection(l1 - 1, prevLen)
+        } else {
+            text.replace(0, 0, l2, lineText(l2).length, "")
+            setSelection(0, 0)
+        }
+    }
+
+    fun moveLinesUp() {
+        val (l1, l2) = selectedLines()
+        if (l1 == 0) return
+        val prev = lineText(l1 - 1)
+        val block = (l1..l2).joinToString("\n") { lineText(it) }
+        val sel = hasSelection()
+        val cl = cursor.leftLine
+        val cc = cursor.leftColumn
+        val rl = cursor.rightLine
+        val rc = cursor.rightColumn
+        text.replace(l1 - 1, 0, l2, lineText(l2).length, block + "\n" + prev)
+        if (sel) setSelectionRegion(cl - 1, cc, rl - 1, rc) else setSelection(cl - 1, cc)
+    }
+
+    fun moveLinesDown() {
+        val (l1, l2) = selectedLines()
+        if (l2 >= text.lineCount - 1) return
+        val next = lineText(l2 + 1)
+        val block = (l1..l2).joinToString("\n") { lineText(it) }
+        val sel = hasSelection()
+        val cl = cursor.leftLine
+        val cc = cursor.leftColumn
+        val rl = cursor.rightLine
+        val rc = cursor.rightColumn
+        text.replace(l1, 0, l2 + 1, next.length, next + "\n" + block)
+        if (sel) setSelectionRegion(cl + 1, cc, rl + 1, rc) else setSelection(cl + 1, cc)
     }
 
     fun getCode(): String = text.toString()

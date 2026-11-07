@@ -808,6 +808,30 @@ class MainActivity : AppCompatActivity() {
         setupFindPanel()
         findViewById<TextView>(R.id.keyUndo).setOnClickListener { codeEditor.undo() }
         findViewById<TextView>(R.id.keyRedo).setOnClickListener { codeEditor.redo() }
+        
+        findViewById<TextView>(R.id.keyTools).setOnClickListener { anchor ->
+            val menu = android.widget.PopupMenu(this, anchor)
+            menu.menu.add(0, 1, 0, "Toggle comment")
+            menu.menu.add(0, 2, 1, "Duplicate line")
+            menu.menu.add(0, 3, 2, "Delete line")
+            menu.menu.add(0, 4, 3, "Move line up")
+            menu.menu.add(0, 5, 4, "Move line down")
+            menu.menu.add(0, 6, 5, "Indent")
+            menu.menu.add(0, 7, 6, "Outdent")
+            menu.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> codeEditor.toggleComment()
+                    2 -> codeEditor.duplicateLines()
+                    3 -> codeEditor.deleteLines()
+                    4 -> codeEditor.moveLinesUp()
+                    5 -> codeEditor.moveLinesDown()
+                    6 -> codeEditor.indentLines()
+                    7 -> codeEditor.outdentLines()
+                }
+                true
+            }
+            menu.show()
+        }
     }
 
     // One tap moves once. Holding the key repeats it.
