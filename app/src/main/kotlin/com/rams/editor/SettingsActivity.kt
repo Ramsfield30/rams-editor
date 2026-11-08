@@ -3,13 +3,20 @@ package com.rams.editor
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
+import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
@@ -257,6 +264,19 @@ class SettingsActivity : AppCompatActivity() {
             }
             startActivity(Intent.createChooser(intent, "Share Rams Editor"))
         }
+
+        // Vibrate on key press
+        val hapticSwitch = findViewById<Switch>(R.id.hapticSwitch)
+        hapticSwitch.isChecked = prefs.getBoolean("haptic", true)
+        hapticSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("haptic", checked).apply()
+        }
+
+        // My snippets
+        val countView = findViewById<TextView>(R.id.mySnippetsCount)
+        val refresh = { countView.text = SnippetStore.load(this).size.toString() }
+        refresh()
+        findViewById<View>(R.id.mySnippetsRow).setOnClickListener { showSnippetList(refresh) }
     }
 
     private fun updatePreviewMap(percent: Int) {
@@ -303,5 +323,71 @@ class SettingsActivity : AppCompatActivity() {
             dark.setBackgroundColor(android.graphics.Color.parseColor("#2D2D2D"))
             dark.setTextColor(android.graphics.Color.parseColor("#888888"))
         }
+    }
+
+    // ---- My snippets ----
+    private fun showSnippetList(onChange: () -> Unit) {
+        val items = SnippetStore.load(this)
+        val labels = items.map { it.first }.toMutableList()
+        labels.add("＋ Add a snippet")
+        AlertDialog.Builder(this)
+            .setTitle("My snippets")
+            .setItems(labels.toTypedArray()) { _, which ->
+                editSnippet(if (which == items.size) null else which, onChange)
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun editSnippet(index: Int?, onChange: () -> Unit) {
+        val list = SnippetStore.load(this)
+        val existing = if (index != null && index in list.indices) list[index] else null
+        val pad = (16 * resources.displayMetrics.density).toInt()
+
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad / 2, pad, 0)
+        }
+        val label = EditText(this).apply {
+            hint = "Button text, like btn"
+            setSingleLine()
+            setText(existing?.first ?: "")
+        }
+        val code = EditText(this).apply {
+            hint = "Code to insert. Use \$0 where the cursor should go"
+            minLines = 4
+            gravity = Gravity.TOP
+            typeface = Typeface.MONOSPACE
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setText(existing?.second ?: "")
+        }
+        box.addView(label)
+        box.addView(code)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(if (existing == null) "New snippet" else "Edit snippet")
+            .setView(box)
+            .setPositiveButton("Save") { _, _ ->
+                val l = label.text.toString().trim()
+                val c = code.text.toString()
+                if (l.isEmpty() || c.isEmpty()) {
+                    Toast.makeText(this, "Both boxes need some text", Toast.LENGTH_SHORT).show()
+                } else {
+                    if (existing == null) list.add(l to c) else list[index!!] = l to c
+                    SnippetStore.save(this, list)
+                    onChange()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+        if (existing != null) {
+            dialog.setNeutralButton("Delete") { _, _ ->
+                list.removeAt(index!!)
+                SnippetStore.save(this, list)
+                onChange()
+            }
+        }
+        dialog.show()
     }
 }

@@ -10,6 +10,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.style.ForegroundColorSpan
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -46,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private val autoSaveHandler = Handler(Looper.getMainLooper())
     private var autoSaveRunnable: Runnable? = null
     private var hasUnsavedChanges = false
+    private var hapticOn = true
 
     // Waits a moment after typing stops before updating the live preview
     private val previewHandler = Handler(Looper.getMainLooper())
@@ -256,6 +258,32 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    // A small buzz when you press a key in the bottom bar
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (hapticOn && ev.actionMasked == MotionEvent.ACTION_DOWN &&
+            isOverKeys(ev.rawX, ev.rawY)
+        ) {
+            window.decorView.performHapticFeedback(
+                HapticFeedbackConstants.KEYBOARD_TAP,
+                HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+            )
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun isOverKeys(x: Float, y: Float): Boolean {
+        val bars = listOf(snippetRow1.parent as View, findViewById<View>(R.id.snippetBar2))
+        val loc = IntArray(2)
+        for (b in bars) {
+            if (b.visibility != View.VISIBLE) continue
+            b.getLocationOnScreen(loc)
+            if (x >= loc[0] && x <= loc[0] + b.width && y >= loc[1] && y <= loc[1] + b.height) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun schedulePreviewUpdate(code: String) {
@@ -1003,6 +1031,9 @@ class MainActivity : AppCompatActivity() {
         val runAction = prefs.getString("run_action", "menu")
         findViewById<TextView>(R.id.btnRunMenu).visibility =
             if (runAction == "menu") View.VISIBLE else View.GONE
+
+        hapticOn = prefs.getBoolean("haptic", true)
+        snippetBar.reloadCustom()
     }
 
     override fun onResume() {

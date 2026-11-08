@@ -75,6 +75,9 @@ class CodeEditor @JvmOverloads constructor(
         tabWidth = 4
         isLineNumberEnabled = true
         RamsAnalyzeManager.onStylesApplied = { reveal() }
+        // Backspace removes one space at a time, and never swallows a whole line
+        props.deleteEmptyLineFast = false
+        props.deleteMultiSpaces = 1
     }
 
     override fun setEnabled(enabled: Boolean) {
@@ -403,8 +406,13 @@ class CodeEditor @JvmOverloads constructor(
 
     fun insertSnippet(code: String, cursorOffset: Int) {
         val start = cursor.left
-        text.insert(cursor.leftLine, cursor.leftColumn, code)
-        setSelection((start + cursorOffset).coerceAtMost(text.length))
+        val indent = lineText(cursor.leftLine).takeWhile { it == ' ' || it == '\t' }
+        // Lines after the first line up with the line you are on
+        val adjusted = code.replace("\n", "\n" + indent)
+        val offset = cursorOffset.coerceIn(0, code.length)
+        val extra = indent.length * code.substring(0, offset).count { it == '\n' }
+        text.insert(cursor.leftLine, cursor.leftColumn, adjusted)
+        setSelection((start + offset + extra).coerceAtMost(text.length))
     }
 
     fun moveCursorLines(dy: Int) {

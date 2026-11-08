@@ -1,7 +1,6 @@
 package com.rams.editor
 
 import android.content.Context
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -13,6 +12,7 @@ class SnippetBar(
 ) {
 
     var tabSize = 4
+    private var mode = "html"
 
     // Fixed symbols — always shown in row 2
     private val fixedSnippets = listOf(
@@ -73,7 +73,16 @@ class SnippetBar(
     }
 
     fun setMode(fileExtension: String) {
+        mode = fileExtension
         row1.removeAllViews()
+
+        // Your own snippets come first. Put $0 where the cursor should end up.
+        SnippetStore.load(context).forEach { (label, rawCode) ->
+            val marker = rawCode.indexOf("\$0")
+            val code = rawCode.replace("\$0", "")
+            addChip(row1, "★ $label", code, if (marker >= 0) marker else code.length, true)
+        }
+
         val snippets = when (fileExtension) {
             "css" -> cssSnippets
             "js" -> jsSnippets
@@ -84,6 +93,11 @@ class SnippetBar(
         }
     }
 
+    // Call this after your snippets changed in Settings
+    fun reloadCustom() {
+        setMode(mode)
+    }
+
     private fun setupFixedRow() {
         row2.removeAllViews()
         fixedSnippets.forEach { (label, code) ->
@@ -91,11 +105,19 @@ class SnippetBar(
         }
     }
 
-    private fun addChip(container: LinearLayout, label: String, code: String) {
+    private fun addChip(
+        container: LinearLayout,
+        label: String,
+        code: String,
+        fixedOffset: Int? = null,
+        accent: Boolean = false
+    ) {
         val chip = TextView(context).apply {
             text = label
             textSize = 13f
-            setTextColor(android.graphics.Color.parseColor("#CCCCCC"))
+            setTextColor(
+                android.graphics.Color.parseColor(if (accent) "#52AAF8" else "#CCCCCC")
+            )
             setPadding(20, 0, 20, 0)
             gravity = android.view.Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -108,7 +130,7 @@ class SnippetBar(
             )
             setOnClickListener {
                 val finalCode = if (label == "→|") " ".repeat(tabSize) else code
-                onInsert(finalCode, getCursorOffset(finalCode))
+                onInsert(finalCode, fixedOffset ?: getCursorOffset(finalCode))
             }
         }
 

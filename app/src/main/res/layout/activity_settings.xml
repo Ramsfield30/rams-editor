@@ -610,6 +610,64 @@
 
             </LinearLayout>
 
+            <!-- Vibrate on key press -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Vibrate on key press"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <Switch
+                    android:id="@+id/hapticSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:thumbTint="#2196F3"
+                    android:trackTint="#333333"/>
+            </LinearLayout>
+
+            <!-- My snippets -->
+            <LinearLayout
+                android:id="@+id/mySnippetsRow"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="?android:attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="My snippets"
+                    android:textColor="#CCCCCC"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/mySnippetsCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#888888"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="10dp"
+                    android:text="›"
+                    android:textColor="#888888"
+                    android:textSize="18sp"/>
+            </LinearLayout>
+
             <!-- Divider -->
             <View
                 android:layout_width="match_parent"
