@@ -318,6 +318,59 @@ class CodeEditor @JvmOverloads constructor(
         if (sel) setSelectionRegion(cl + 1, cc, rl + 1, rc) else setSelection(cl + 1, cc)
     }
 
+    // ---- Emmet ----
+    private fun cursorInBlock(tag: String): Boolean {
+        val before = text.toString().substring(0, cursor.left.coerceAtMost(text.length))
+        val open = before.lastIndexOf("<$tag", ignoreCase = true)
+        if (open < 0) return false
+        return before.lastIndexOf("</$tag", ignoreCase = true) < open
+    }
+
+    // Turns the abbreviation before the cursor into code. Returns false if there is none.
+    fun expandEmmet(): Boolean {
+        if (hasSelection()) return false
+        val ext = currentFileName.substringAfterLast('.', "").lowercase()
+        val htmlFile = ext == "html" || ext == "htm" || ext == "xml" || ext == "svg" || ext == "php"
+        val cssFile = ext == "css"
+        if (!htmlFile && !cssFile) return false
+        val css = cssFile || cursorInBlock("style")
+        if (!css && cursorInBlock("script")) return false
+
+        val line = cursor.leftLine
+        val col = cursor.leftColumn
+        val lineStr = lineText(line)
+        if (col <= 0 || col > lineStr.length) return false
+        val abbr = Emmet.extract(lineStr.substring(0, col), css) ?: return false
+        val baseIndent = lineStr.takeWhile { it == ' ' || it == '\t' }
+        val result = Emmet.expand(abbr, css, " ".repeat(tabSize), baseIndent) ?: return false
+
+        val startCol = col - abbr.length
+        text.replace(line, startCol, line, col, result.text)
+
+        // Put the cursor where the abbreviation says (inside the first empty spot)
+        val before = result.text.substring(0, result.cursor)
+        val newlines = before.count { it == '\n' }
+        val targetLine = line + newlines
+        val targetCol = if (newlines == 0) startCol + before.length
+        else before.length - before.lastIndexOf('\n') - 1
+        setSelection(targetLine, targetCol)
+        return true
+    }
+
+    // The ↹ key: expand an abbreviation, otherwise indent
+    fun tabKey() {
+        if (expandEmmet()) return
+        if (hasSelection() && cursor.leftLine != cursor.rightLine) {
+            indentLines()
+            return
+        }
+        val l = cursor.leftLine
+        val c = cursor.leftColumn
+        val spaces = " ".repeat(tabSize)
+        text.insert(l, c, spaces)
+        setSelection(l, c + spaces.length)
+    }
+
     fun getCode(): String = text.toString()
 
     fun setCode(code: String) {

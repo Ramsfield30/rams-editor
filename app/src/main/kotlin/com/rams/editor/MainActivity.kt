@@ -832,6 +832,8 @@ class MainActivity : AppCompatActivity() {
             }
             menu.show()
         }
+        
+        findViewById<TextView>(R.id.keyTab).setOnClickListener { codeEditor.tabKey() }
     }
 
     // One tap moves once. Holding the key repeats it.
