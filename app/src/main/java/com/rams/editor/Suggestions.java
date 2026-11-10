@@ -212,7 +212,7 @@ public final class Suggestions {
             if (!startsWith(n, prefix)) continue;
             if (n.equals("data-")) items.add(new Item("data-", "attribute", "data-", 0));
             else if (BOOLEAN_ATTRS.contains(n)) items.add(new Item(n, "attribute", n, 0));
-            else items.add(new Item(n, "attribute", n + "=\"\"", 1));
+            else items.add(new Item(n, "attribute", n + "=", 0));
         }
         return new Result(prefix, items);
     }
@@ -358,8 +358,7 @@ public final class Suggestions {
                 List<Item> items = new ArrayList<>();
                 for (String p : CSS_PSEUDO) {
                     if (!startsWith(p, ps.group(1))) continue;
-                    boolean paren = p.endsWith("()");
-                    items.add(new Item(p, "pseudo", p, paren ? 1 : 0));
+                    items.add(new Item(p, "pseudo", p.replace("()", ""), 0));
                 }
                 return new Result(ps.group(1), items);
             }
@@ -374,7 +373,7 @@ public final class Suggestions {
             if (!stmt.trim().equals(prefix)) return null;
             List<Item> items = new ArrayList<>();
             for (String p : CSS_PROPS) {
-                if (startsWith(p, prefix)) items.add(new Item(p, "property", p + ": ;", 1));
+                if (startsWith(p, prefix)) items.add(new Item(p, "property", p + ": ", 0));
             }
             return new Result(prefix, items);
         }
@@ -448,22 +447,9 @@ public final class Suggestions {
         LinkedHashSet<String> seen = new LinkedHashSet<>();
         List<Item> items = new ArrayList<>();
         String[] list = afterDot ? JS_MEMBERS : JS_WORDS;
-        if (prefix.length() >= 1) {
-            for (String w : list) {
-                if (startsWith(w, prefix) && !w.equals(prefix) && seen.add(w)) {
-                    boolean isFn = afterDot && w.matches(
-                            "log|error|warn|info|table|querySelector.*|getElement.*|createElement|"
-                                    + "addEventListener|removeEventListener|add|remove|toggle|contains|"
-                                    + "getAttribute|setAttribute|removeAttribute|appendChild|append|"
-                                    + "prepend|push|pop|shift|unshift|slice|splice|map|filter|reduce|"
-                                    + "forEach|find.*|includes|indexOf|join|sort|reverse|then|catch|"
-                                    + "finally|json|text|toString|toFixed|trim|split|replace|startsWith|"
-                                    + "endsWith|toLowerCase|toUpperCase|getItem|setItem|removeItem|"
-                                    + "stringify|parse|floor|ceil|round|random|max|min|preventDefault|"
-                                    + "stopPropagation|focus|click|submit");
-                    items.add(new Item(w, afterDot ? "member" : "keyword",
-                            isFn ? w + "()" : w, isFn ? 1 : 0));
-                }
+        for (String w : list) {
+            if (startsWith(w, prefix) && !w.equals(prefix) && seen.add(w)) {
+                items.add(new Item(w, afterDot ? "member" : "keyword", w, 0));
             }
         }
         // words already used in this file (not after a dot)
