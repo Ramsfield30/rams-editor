@@ -53,7 +53,9 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
                 val c = SimpleCompletionItem(
                     item.label, item.detail, result.prefix.length, item.commit
                 )
-                if (item.cursorBack > 0) c.cursorOffset(item.commit.length - item.cursorBack)
+                // Try setting the cursor offset as a property. 
+                // If this still says "Unresolved reference", use the 5-argument constructor instead.
+                c.cursorOffset = item.commit.length - item.cursorBack
                 publisher.addItem(c)
             }
         } catch (t: Throwable) {
