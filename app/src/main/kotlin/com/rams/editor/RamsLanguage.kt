@@ -50,12 +50,20 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
             val result = Suggestions.suggest(analyzer.fileName, whole.substring(0, end), whole)
                 ?: return
             for (item in Suggestions.top(result)) {
+                // Calculate where the cursor should land after inserting
+                val cursorOffset = if (item.cursorBack > 0) {
+                    item.commit.length - item.cursorBack
+                } else {
+                    item.commit.length
+                }
+                
                 val c = SimpleCompletionItem(
-                    item.label, item.detail, result.prefix.length, item.commit
+                    item.label, 
+                    item.detail, 
+                    result.prefix.length, 
+                    item.commit,
+                    cursorOffset
                 )
-                // Try setting the cursor offset as a property. 
-                // If this still says "Unresolved reference", use the 5-argument constructor instead.
-                c.cursorOffset = item.commit.length - item.cursorBack
                 publisher.addItem(c)
             }
         } catch (t: Throwable) {
