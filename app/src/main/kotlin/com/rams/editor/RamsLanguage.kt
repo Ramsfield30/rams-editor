@@ -50,20 +50,18 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
             val result = Suggestions.suggest(analyzer.fileName, whole.substring(0, end), whole)
                 ?: return
             for (item in Suggestions.top(result)) {
-                // Calculate where the cursor should land after inserting
-                val cursorOffset = if (item.cursorBack > 0) {
+                val c = SimpleCompletionItem(
+                    item.label, item.detail, result.prefix.length, item.commit
+                )
+                // In sora-editor 0.23.6, cursorOffset is a mutable field.
+                // We calculate it and ensure it's valid (between 0 and commit length).
+                val offset = if (item.cursorBack > 0) {
                     item.commit.length - item.cursorBack
                 } else {
                     item.commit.length
                 }
+                c.cursorOffset = offset.coerceIn(0, item.commit.length)
                 
-                val c = SimpleCompletionItem(
-                    item.label, 
-                    item.detail, 
-                    result.prefix.length, 
-                    item.commit,
-                    cursorOffset
-                )
                 publisher.addItem(c)
             }
         } catch (t: Throwable) {
