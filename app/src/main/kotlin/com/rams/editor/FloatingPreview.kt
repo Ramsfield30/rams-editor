@@ -28,6 +28,7 @@ class FloatingPreview(private val context: Context) {
         context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var floatingView: View? = null
     private var webView: WebView? = null
+    var onFocusReturn: (() -> Unit)? = null
     private var holder: FrameLayout? = null
     private var pendingView: WebView? = null
     private var spareView: WebView? = null
@@ -294,6 +295,10 @@ class FloatingPreview(private val context: Context) {
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         }
         if (isShowing) windowManager.updateViewLayout(floatingView, params)
+        if (!interactive) {
+            webView?.clearFocus()
+            onFocusReturn?.invoke()
+        }
     }
 
     private fun setupTouch() {

@@ -6,6 +6,8 @@ import android.os.Looper
 import io.github.rosemoe.sora.lang.EmptyLanguage
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
 import io.github.rosemoe.sora.lang.analysis.StyleReceiver
+import io.github.rosemoe.sora.lang.completion.CompletionPublisher
+import io.github.rosemoe.sora.lang.completion.SimpleCompletionItem
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandleResult
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler
 import io.github.rosemoe.sora.lang.styling.MappedSpans
@@ -34,6 +36,30 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
     override fun getSymbolPairs(): SymbolPairMatch = pairs
 
     override fun getNewlineHandlers(): Array<NewlineHandler> = newlineHandlers
+
+    // The suggestion popup
+    override fun requireAutoComplete(
+        content: ContentReference,
+        position: CharPosition,
+        publisher: CompletionPublisher,
+        extraArguments: Bundle
+    ) {
+        try {
+            val whole = content.reference.toString()
+            val end = position.index.coerceIn(0, whole.length)
+            val result = Suggestions.suggest(analyzer.fileName, whole.substring(0, end), whole)
+                ?: return
+            for (item in Suggestions.top(result)) {
+                val c = SimpleCompletionItem(
+                    item.label, item.detail, result.prefix.length, item.commit
+                )
+                if (item.cursorBack > 0) c.cursorOffset(item.commit.length - item.cursorBack)
+                publisher.addItem(c)
+            }
+        } catch (t: Throwable) {
+            CrashLog.note(t)
+        }
+    }
 
     override fun getAnalyzeManager(): AnalyzeManager = analyzer
 

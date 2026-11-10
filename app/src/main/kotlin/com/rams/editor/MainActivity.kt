@@ -83,6 +83,17 @@ class MainActivity : AppCompatActivity() {
         btnSettings = findViewById(R.id.btnSettings)
 
         floatingPreview = FloatingPreview(this)
+        
+        floatingPreview?.onFocusReturn = {
+            codeEditor.postDelayed({
+                val wasFocused = codeEditor.hasFocus()
+                codeEditor.requestFocus()
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE)
+                    as android.view.inputmethod.InputMethodManager
+                imm.restartInput(codeEditor)
+                if (wasFocused) imm.showSoftInput(codeEditor, 0)
+            }, 120)
+        }
 
         setupConsole()
 
