@@ -19,6 +19,7 @@ import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentReference
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
+import io.github.rosemoe.sora.widget.CodeEditor as SoraCodeEditor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -51,8 +52,9 @@ class RamsLanguage(fileName: String) : EmptyLanguage() {
                 ?: return
             for (item in Suggestions.top(result)) {
                 publisher.addItem(
-                    SimpleCompletionItem(
-                        item.label, item.detail, result.prefix.length, item.commit
+                    RamsCompletionItem(
+                        item.label, item.detail, result.prefix.length,
+                        item.commit, item.cursorBack
                     )
                 )
             }
@@ -292,5 +294,27 @@ private class TagNewlineHandler : NewlineHandler {
             return NewlineHandleResult(sb, tail.length)
         }
         return NewlineHandleResult(sb, 0)
+    }
+}
+
+// A suggestion that puts the cursor in the right place after it is inserted
+private class RamsCompletionItem(
+    label: CharSequence,
+    desc: CharSequence,
+    prefixLength: Int,
+    commit: CharSequence,
+    private val cursorBack: Int
+) : SimpleCompletionItem(label, desc, prefixLength, commit) {
+
+    override fun performCompletion(
+        editor: SoraCodeEditor, text: Content, line: Int, column: Int
+    ) {
+        super.performCompletion(editor, text, line, column)
+        if (cursorBack > 0) {
+            editor.post {
+                val c = editor.cursor
+                editor.setSelection(c.leftLine, (c.leftColumn - cursorBack).coerceAtLeast(0))
+            }
+        }
     }
 }

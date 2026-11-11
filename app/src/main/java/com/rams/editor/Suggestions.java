@@ -162,7 +162,7 @@ public final class Suggestions {
                 return new Result(prefix, items);
             }
             for (String t : TAGS) {
-                if (startsWith(t, prefix)) items.add(new Item(t, "tag", t, 0));
+                if (startsWith(t, prefix)) items.add(tagItem(t));
             }
             return new Result(prefix, items);
         }
@@ -212,7 +212,7 @@ public final class Suggestions {
             if (!startsWith(n, prefix)) continue;
             if (n.equals("data-")) items.add(new Item("data-", "attribute", "data-", 0));
             else if (BOOLEAN_ATTRS.contains(n)) items.add(new Item(n, "attribute", n, 0));
-            else items.add(new Item(n, "attribute", n + "=", 0));
+            else items.add(mk(n, "attribute", n + "=\"|\""));
         }
         return new Result(prefix, items);
     }
@@ -243,6 +243,48 @@ public final class Suggestions {
         for (int i = stack.size() - 1; i >= 0; i--) out.add(stack.get(i));
         return new ArrayList<>(out);
     }
+
+    // "|" in the template marks where the cursor should end up
+    private static Item mk(String label, String detail, String template) {
+        int at = template.indexOf('|');
+        if (at < 0) return new Item(label, detail, template, 0);
+        String commit = template.substring(0, at) + template.substring(at + 1);
+        return new Item(label, detail, commit, commit.length() - at);
+    }
+
+    // A tag completes to the whole element, with the cursor inside it
+    private static Item tagItem(String t) {
+        switch (t) {
+            case "img": return mk(t, "tag", "img src=\"|\" alt=\"\">");
+            case "input": return mk(t, "tag", "input type=\"text\">");
+            case "br": case "hr": case "col": case "source": return mk(t, "tag", t + ">");
+            case "link": return mk(t, "tag", "link rel=\"stylesheet\" href=\"|\">");
+            case "meta": return mk(t, "tag", "meta name=\"|\" content=\"\">");
+            case "a": return mk(t, "tag", "a href=\"|\"></a>");
+            case "script": return mk(t, "tag", "script src=\"|\"></script>");
+            default: return mk(t, "tag", t + ">|</" + t + ">");
+        }
+    }
+
+    private static final Set<String> MEMBER_FUNCS = new HashSet<>(Arrays.asList(
+            "log", "error", "warn", "info", "table", "querySelector", "querySelectorAll",
+            "getElementById", "getElementsByClassName", "getElementsByTagName", "createElement",
+            "addEventListener", "removeEventListener", "add", "remove", "toggle", "contains",
+            "getAttribute", "setAttribute", "removeAttribute", "appendChild", "append",
+            "prepend", "push", "pop", "shift", "unshift", "slice", "splice", "map", "filter",
+            "reduce", "forEach", "find", "findIndex", "includes", "indexOf", "join", "sort",
+            "reverse", "then", "catch", "finally", "json", "text", "toString", "toFixed",
+            "trim", "split", "replace", "startsWith", "endsWith", "toLowerCase", "toUpperCase",
+            "getItem", "setItem", "removeItem", "stringify", "parse", "floor", "ceil", "round",
+            "random", "max", "min", "preventDefault", "stopPropagation", "focus", "click",
+            "submit"));
+
+    private static final Set<String> GLOBAL_FUNCS = new HashSet<>(Arrays.asList(
+            "fetch", "setTimeout", "setInterval", "clearTimeout", "clearInterval", "parseInt",
+            "parseFloat", "isNaN", "alert", "confirm", "prompt", "requestAnimationFrame"));
+
+    private static final Set<String> CONTROL_WORDS = new HashSet<>(Arrays.asList(
+            "if", "while", "switch", "catch"));
 
     private static List<Item> classNames(String whole, String prefix) {
         TreeSet<String> found = new TreeSet<>();
@@ -358,7 +400,7 @@ public final class Suggestions {
                 List<Item> items = new ArrayList<>();
                 for (String p : CSS_PSEUDO) {
                     if (!startsWith(p, ps.group(1))) continue;
-                    items.add(new Item(p, "pseudo", p.replace("()", ""), 0));
+                    items.add(mk(p, "pseudo", p.replace("()", "(|)")));
                 }
                 return new Result(ps.group(1), items);
             }
@@ -373,7 +415,9 @@ public final class Suggestions {
             if (!stmt.trim().equals(prefix)) return null;
             List<Item> items = new ArrayList<>();
             for (String p : CSS_PROPS) {
-                if (startsWith(p, prefix)) items.add(new Item(p, "property", p + ": ", 0));
+                if (startsWith(p, prefix)) {
+                    items.add(mk(p, "property", p + ": |;"));
+                }
             }
             return new Result(prefix, items);
         }
@@ -449,7 +493,11 @@ public final class Suggestions {
         String[] list = afterDot ? JS_MEMBERS : JS_WORDS;
         for (String w : list) {
             if (startsWith(w, prefix) && !w.equals(prefix) && seen.add(w)) {
-                items.add(new Item(w, afterDot ? "member" : "keyword", w, 0));
+                String template = w;
+                if (afterDot && MEMBER_FUNCS.contains(w)) template = w + "(|)";
+                else if (!afterDot && GLOBAL_FUNCS.contains(w)) template = w + "(|)";
+                else if (!afterDot && CONTROL_WORDS.contains(w)) template = w + " (|) {}";
+                items.add(mk(w, afterDot ? "member" : "keyword", template));
             }
         }
         // words already used in this file (not after a dot)
