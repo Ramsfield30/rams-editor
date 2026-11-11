@@ -299,10 +299,10 @@ private class TagNewlineHandler : NewlineHandler {
 
 // A suggestion that puts the cursor in the right place after it is inserted
 private class RamsCompletionItem(
-    label: CharSequence,
-    desc: CharSequence,
+    label: String,
+    desc: String,
     prefixLength: Int,
-    commit: CharSequence,
+    commit: String,
     private val cursorBack: Int
 ) : SimpleCompletionItem(label, desc, prefixLength, commit) {
 
