@@ -87,8 +87,8 @@ class FloatingPreview(private val context: Context) {
             settings.domStorageEnabled = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
-            settings.setSupportZoom(true)
-            settings.builtInZoomControls = true
+            settings.setSupportZoom(false)
+            settings.builtInZoomControls = false
             settings.displayZoomControls = false
             settings.textZoom = 100
             settings.allowFileAccess = true
@@ -194,8 +194,8 @@ class FloatingPreview(private val context: Context) {
             settings.domStorageEnabled = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
-            settings.setSupportZoom(true)
-            settings.builtInZoomControls = true
+            settings.setSupportZoom(false)
+            settings.builtInZoomControls = false
             settings.displayZoomControls = false
             settings.textZoom = 100
             settings.allowFileAccess = true

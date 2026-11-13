@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <corners android:radius="24dp"/>
-    <solid android:color="#0A0A0C"/>
-    <stroke
-        android:width="2dp"
-        android:color="#3A3A46"/>
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp"/>
+            <gradient
+                android:angle="315"
+                android:startColor="#9A968C"
+                android:centerColor="#55514A"
+                android:endColor="#8F8B81"/>
+        </shape>
+    </item>
+    <item
+        android:left="1dp"
+        android:top="1dp"
+        android:right="1dp"
+        android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="23dp"/>
+            <solid android:color="#000000"/>
+        </shape>
+    </item>
+</layer-list>
