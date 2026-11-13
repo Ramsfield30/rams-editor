@@ -14,6 +14,7 @@ import io.github.rosemoe.sora.lang.styling.MappedSpans
 import io.github.rosemoe.sora.lang.styling.Span
 import io.github.rosemoe.sora.lang.styling.Styles
 import io.github.rosemoe.sora.lang.styling.TextStyle
+import io.github.rosemoe.sora.lang.styling.CodeBlock
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentReference
@@ -214,7 +215,57 @@ class RamsAnalyzeManager(var fileName: String) : AnalyzeManager {
         }
         if (col == 0) builder.add(line, Span.obtain(0, styleFor(0)))
         builder.determine(line)
-        return Styles(builder.build())
+        val styles = Styles(builder.build())
+        try {
+            styles.blocks = buildBlocks(code)
+        } catch (t: Throwable) {
+            CrashLog.note(t)
+        }
+        return styles
+    }
+
+    // Indent guides: one block for each indented region
+    private fun buildBlocks(code: String): MutableList<CodeBlock> {
+        val blocks = ArrayList<CodeBlock>()
+        val stackLine = ArrayList<Int>()
+        val stackIndent = ArrayList<Int>()
+        var lastReal = -1
+        var i = 0
+        for (raw in code.split('\n')) {
+            val text = raw.trimEnd('\r')
+            if (text.isNotBlank()) {
+                val indent = text.length - text.trimStart(' ', '\t').length
+                while (stackIndent.isNotEmpty() && stackIndent[stackIndent.size - 1] >= indent) {
+                    val k = stackIndent.size - 1
+                    addBlock(blocks, stackLine[k], stackIndent[k], lastReal)
+                    stackLine.removeAt(k)
+                    stackIndent.removeAt(k)
+                }
+                stackLine.add(i)
+                stackIndent.add(indent)
+                lastReal = i
+            }
+            i++
+        }
+        while (stackIndent.isNotEmpty()) {
+            val k = stackIndent.size - 1
+            addBlock(blocks, stackLine[k], stackIndent[k], lastReal)
+            stackLine.removeAt(k)
+            stackIndent.removeAt(k)
+        }
+        blocks.sortWith(compareBy<CodeBlock>({ it.endLine }, { it.endColumn }))
+        return blocks
+    }
+
+    private fun addBlock(out: MutableList<CodeBlock>, parentLine: Int, indent: Int, lastLine: Int) {
+        val first = parentLine + 1
+        if (lastLine < first) return
+        out.add(CodeBlock().apply {
+            startLine = first
+            startColumn = indent
+            endLine = lastLine
+            endColumn = indent
+        })
     }
 }
 

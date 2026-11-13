@@ -54,6 +54,10 @@ class CodeEditor @JvmOverloads constructor(
     // Not wired up yet (coming back in a later step)
     var autoCloseEnabled: Boolean = true
     var showIndentGuides: Boolean = true
+        set(value) {
+            field = value
+            isBlockLineEnabled = value
+        }
 
     private var currentFileName = ""
 
