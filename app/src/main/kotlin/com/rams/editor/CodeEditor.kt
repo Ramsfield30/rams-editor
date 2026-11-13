@@ -9,6 +9,7 @@ import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.EventReceiver
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import io.github.rosemoe.sora.widget.schemes.SchemeDarcula
+import io.github.rosemoe.sora.widget.EditorSearcher
 import io.github.rosemoe.sora.widget.CodeEditor as SoraEditor
 
 // Rams Editor's editor, now built on sora-editor.
@@ -499,7 +500,25 @@ class CodeEditor @JvmOverloads constructor(
         }
         if (fromCursor && matchIndex >= 0) selectCurrentMatch()
         val invalid = findQuery.isNotEmpty() && p == null
+        paintAllMatches(!invalid)
         onFindResult?.invoke(matchIndex + 1, if (invalid) -1 else starts.size)
+    }
+
+    // Lets sora paint every match, not just the selected one
+    private fun paintAllMatches(on: Boolean) {
+        try {
+            if (!on || findQuery.isEmpty()) {
+                searcher.stopSearch()
+                return
+            }
+            val type = when {
+                findRegex -> EditorSearcher.SearchOptions.TYPE_REGULAR_EXPRESSION
+                findWord -> EditorSearcher.SearchOptions.TYPE_WHOLE_WORD
+                else -> EditorSearcher.SearchOptions.TYPE_NORMAL
+            }
+            searcher.search(findQuery, EditorSearcher.SearchOptions(type, !findCase))
+        } catch (e: Exception) {
+        }
     }
 
     // Selects the current match and scrolls it into view
@@ -581,6 +600,7 @@ class CodeEditor @JvmOverloads constructor(
         matchStarts = emptyList()
         matchEnds = emptyList()
         matchIndex = -1
+        paintAllMatches(false)
         onFindResult?.invoke(0, 0)
     }
 }
