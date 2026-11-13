@@ -37,11 +37,16 @@
 
     </LinearLayout>
 
-    <!-- Phone body -->
+    <!-- Phone + side buttons -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="1">
+
+    <!-- Phone body -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_margin="6dp"
         android:padding="5dp"
         android:background="@drawable/phone_frame">
@@ -126,11 +131,45 @@
 
         <!-- Punch-hole camera -->
         <View
-            android:layout_width="9dp"
-            android:layout_height="9dp"
+            android:layout_width="34dp"
+            android:layout_height="10dp"
             android:layout_gravity="top|center_horizontal"
-            android:layout_marginTop="7dp"
+            android:layout_marginTop="6dp"
             android:background="@drawable/camera_hole"/>
+
+    </FrameLayout>
+
+    <!-- Power button (right) -->
+    <View
+        android:layout_width="4dp"
+        android:layout_height="34dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="62dp"
+        android:layout_marginEnd="2dp"
+        android:background="#7A766C"/>
+
+    <!-- Action button + volume (left) -->
+    <View
+        android:layout_width="4dp"
+        android:layout_height="10dp"
+        android:layout_gravity="start|top"
+        android:layout_marginTop="34dp"
+        android:layout_marginStart="2dp"
+        android:background="#7A766C"/>
+    <View
+        android:layout_width="4dp"
+        android:layout_height="22dp"
+        android:layout_gravity="start|top"
+        android:layout_marginTop="56dp"
+        android:layout_marginStart="2dp"
+        android:background="#7A766C"/>
+    <View
+        android:layout_width="4dp"
+        android:layout_height="22dp"
+        android:layout_gravity="start|top"
+        android:layout_marginTop="82dp"
+        android:layout_marginStart="2dp"
+        android:background="#7A766C"/>
 
     </FrameLayout>
 
