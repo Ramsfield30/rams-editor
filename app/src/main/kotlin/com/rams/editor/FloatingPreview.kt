@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +12,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -30,6 +32,8 @@ class FloatingPreview(private val context: Context) {
     private var webView: WebView? = null
     var onFocusReturn: (() -> Unit)? = null
     private var holder: FrameLayout? = null
+    private var statusBar: ViewGroup? = null
+    private var homeBar: View? = null
     private var pendingView: WebView? = null
     private var spareView: WebView? = null
     private var loadId = 0
@@ -39,6 +43,7 @@ class FloatingPreview(private val context: Context) {
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockRunnable: Runnable? = null
     private var restoreScrollY = 0
+    private var firstHtml: String? = null
 
     private val params = WindowManager.LayoutParams(
         420, 600,
@@ -65,6 +70,8 @@ class FloatingPreview(private val context: Context) {
 
         webView = floatingView?.findViewById(R.id.previewWebView)
         holder = floatingView?.findViewById(R.id.previewWebHolder)
+        statusBar = floatingView?.findViewById(R.id.previewStatusBar)
+        homeBar = floatingView?.findViewById(R.id.previewHomeBar)
         holder?.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
             applyVirtualScreen(right - left, bottom - top)
         }
@@ -80,6 +87,7 @@ class FloatingPreview(private val context: Context) {
                             view.evaluateJavascript("window.scrollTo(0,$y)", null)
                         }, 250)
                     }
+                    applyBarColors(view)
                 }
             }
             webChromeClient = ConsoleLog.chromeClient()
@@ -87,21 +95,39 @@ class FloatingPreview(private val context: Context) {
             settings.domStorageEnabled = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
-            settings.setSupportZoom(false)
-            settings.builtInZoomControls = false
+            settings.setSupportZoom(true)
+            settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.textZoom = 100
             settings.allowFileAccess = true
             settings.allowFileAccessFromFileURLs = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             clipToOutline = true
-            loadDataWithBaseURL(
-                currentBaseUrl,
-                injectViewport(htmlContent),
-                "text/html",
-                "UTF-8",
-                null
-            )
+            // Wait until the view has its real size, then load the page
+            firstHtml = injectViewport(htmlContent)
+            val targetW = context.resources.displayMetrics.widthPixels
+            addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+                override fun onLayoutChange(
+                    v: View, left: Int, top: Int, right: Int, bottom: Int,
+                    oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int
+                ) {
+                    val html = firstHtml ?: return
+                    if (right - left != targetW) return
+                    firstHtml = null
+                    v.removeOnLayoutChangeListener(this)
+                    v.post {
+                        (v as WebView).loadDataWithBaseURL(
+                            currentBaseUrl, html, "text/html", "UTF-8", null
+                        )
+                    }
+                }
+            })
+            // Safety net in case the size never matches
+            postDelayed({
+                val html = firstHtml ?: return@postDelayed
+                firstHtml = null
+                loadDataWithBaseURL(currentBaseUrl, html, "text/html", "UTF-8", null)
+            }, 600)
         }
 
         val btnClose = floatingView?.findViewById<TextView>(R.id.btnClose)
@@ -156,6 +182,7 @@ class FloatingPreview(private val context: Context) {
                             webView = v
                             pendingView = null
                             applyVirtualScreen(host.width, host.height)
+                            applyBarColors(v)
                         }
                         if (android.os.Build.VERSION.SDK_INT >= 23) {
                             // Swap exactly when the new page has been drawn
@@ -194,8 +221,8 @@ class FloatingPreview(private val context: Context) {
             settings.domStorageEnabled = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = false
-            settings.setSupportZoom(false)
-            settings.builtInZoomControls = false
+            settings.setSupportZoom(true)
+            settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.textZoom = 100
             settings.allowFileAccess = true
@@ -240,6 +267,7 @@ class FloatingPreview(private val context: Context) {
             """.trimIndent(),
             null
         )
+        webView?.postDelayed({ applyBarColors(webView) }, 200)
     }
 
     fun updateJs(jsContent: String) {
@@ -371,6 +399,39 @@ class FloatingPreview(private val context: Context) {
         wv.scaleY = scale
     }
 
+    // Status bar and home bar take the page's own background color, like a real phone
+    private fun applyBarColors(wv: WebView?) {
+        wv ?: return
+        wv.evaluateJavascript(
+            """
+            (function() {
+                function bg(el) { return getComputedStyle(el).backgroundColor; }
+                function clear(c) { return !c || c === 'transparent' || c === 'rgba(0, 0, 0, 0)'; }
+                var c = document.body ? bg(document.body) : '';
+                if (clear(c)) c = bg(document.documentElement);
+                if (clear(c)) c = 'rgb(255, 255, 255)';
+                return c;
+            })()
+            """.trimIndent()
+        ) { value ->
+            val nums = Regex("[0-9.]+").findAll(value ?: "").map { it.value.toFloat() }.toList()
+            if (nums.size < 3) return@evaluateJavascript
+            val color = Color.rgb(nums[0].toInt(), nums[1].toInt(), nums[2].toInt())
+            val lum = (0.299 * nums[0] + 0.587 * nums[1] + 0.114 * nums[2]) / 255.0
+            val fg = if (lum > 0.6) Color.BLACK else Color.WHITE
+            statusBar?.let { bar ->
+                bar.setBackgroundColor(color)
+                for (i in 0 until bar.childCount) {
+                    when (val child = bar.getChildAt(i)) {
+                        is TextView -> child.setTextColor(fg)
+                        is ImageView -> child.setColorFilter(fg)
+                    }
+                }
+            }
+            homeBar?.setBackgroundColor(color)
+        }
+    }
+
     // Battery icon in the fake status bar follows the real battery level
     private fun updateBattery(view: ImageView?) {
         val intent = context.registerReceiver(
@@ -392,6 +453,8 @@ class FloatingPreview(private val context: Context) {
             spareView?.destroy()
             spareView = null
             holder = null
+            statusBar = null
+            homeBar = null
             webView = null
             isShowing = false
             isInteractive = false
