@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -416,11 +417,17 @@ class FloatingPreview(private val context: Context) {
         ) { value ->
             val nums = Regex("[0-9.]+").findAll(value ?: "").map { it.value.toFloat() }.toList()
             if (nums.size < 3) return@evaluateJavascript
-            val color = Color.rgb(nums[0].toInt(), nums[1].toInt(), nums[2].toInt())
+            val bgColor = Color.rgb(nums[0].toInt(), nums[1].toInt(), nums[2].toInt())
             val lum = (0.299 * nums[0] + 0.587 * nums[1] + 0.114 * nums[2]) / 255.0
             val fg = if (lum > 0.6) Color.BLACK else Color.WHITE
+            // Same corner size as the phone screen, so the bars follow its curve
+            val r = 20f * context.resources.displayMetrics.density
+
             statusBar?.let { bar ->
-                bar.setBackgroundColor(color)
+                bar.background = GradientDrawable().apply {
+                    setColor(bgColor)
+                    cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                }
                 for (i in 0 until bar.childCount) {
                     when (val child = bar.getChildAt(i)) {
                         is TextView -> child.setTextColor(fg)
@@ -428,7 +435,10 @@ class FloatingPreview(private val context: Context) {
                     }
                 }
             }
-            homeBar?.setBackgroundColor(color)
+            homeBar?.background = GradientDrawable().apply {
+                setColor(bgColor)
+                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r)
+            }
         }
     }
 
