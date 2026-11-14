@@ -125,7 +125,7 @@ class MainActivity : AppCompatActivity() {
             emptyList(),
             onFileClick = { file -> openFileInTab(file) },
             onFolderClick = { node ->
-                node.isExpanded = !node.isExpanded
+                ProjectManager.setExpanded(node.file, !node.isExpanded)
                 fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
             },
             onNewFileInFolder = { folder: File ->

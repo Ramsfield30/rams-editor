@@ -195,22 +195,28 @@ object ProjectManager {
             .show()
     }
 
-   fun buildFileTree(dir: File, depth: Int = 0): List<FileNode> {
-    val nodes = mutableListOf<FileNode>()
-    val files = dir.listFiles()?.filter { it.name != ".git" }?.sortedWith(
-        compareBy({ !it.isDirectory }, { it.name })
-    ) ?: return nodes
+    // Folders the user opened or closed by hand. Survives tree rebuilds.
+    private val folderState = HashMap<String, Boolean>()
 
-    for (file in files) {
-        // Auto expand first level
-        val node = FileNode(file, depth, isExpanded = depth == 0 && file.isDirectory)
-        nodes.add(node)
-        if (file.isDirectory && node.isExpanded) {
-            nodes.addAll(buildFileTree(file, depth + 1))
-        }
+    fun setExpanded(dir: File, expanded: Boolean) {
+        folderState[dir.absolutePath] = expanded
     }
-    return nodes
-}
+
+    fun buildFileTree(dir: File, depth: Int = 0): List<FileNode> {
+        val nodes = mutableListOf<FileNode>()
+        val files = dir.listFiles()?.filter { it.name != ".git" }?.sortedWith(
+            compareBy({ !it.isDirectory }, { it.name })
+        ) ?: return nodes
+
+        for (file in files) {
+            // First level starts open. Anything the user toggled keeps its state.
+            val open = file.isDirectory && (folderState[file.absolutePath] ?: (depth == 0))
+            val node = FileNode(file, depth, isExpanded = open)
+            nodes.add(node)
+            if (open) nodes.addAll(buildFileTree(file, depth + 1))
+        }
+        return nodes
+    }
 
     fun getCurrentProject(): File? = currentProjectDir
 
