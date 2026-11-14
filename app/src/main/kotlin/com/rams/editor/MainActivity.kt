@@ -149,6 +149,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        findViewById<TextView>(R.id.btnGit).setOnClickListener {
+            val dir = ProjectManager.getCurrentProject()
+            if (dir == null) {
+                Toast.makeText(this, "Create or open a project first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (hasUnsavedChanges) saveCurrentFile()
+            drawerLayout.closeDrawer(Gravity.START)
+            startActivityForResult(
+                Intent(this, GitActivity::class.java).putExtra("dir", dir.absolutePath),
+                9001
+            )
+        }
+
         findViewById<TextView>(R.id.btnNewFile).setOnClickListener {
             if (ProjectManager.getCurrentProject() == null) {
                 Toast.makeText(this, "Create or open a project first", Toast.LENGTH_SHORT).show()
@@ -733,6 +747,15 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 100) showPreview()
+        if (requestCode == 9001) {
+            // Back from Git: refresh the file list, and reload the open file after a pull
+            fileTreeAdapter.updateNodes(ProjectManager.refreshTree())
+            if (resultCode == RESULT_OK && currentTabIndex in openTabs.indices &&
+                openTabs[currentTabIndex].exists()
+            ) {
+                switchToTab(currentTabIndex)
+            }
+        }
     }
 
     private fun setupFindPanel() {

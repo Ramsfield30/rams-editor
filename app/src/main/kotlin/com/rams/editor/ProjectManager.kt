@@ -21,19 +21,18 @@ object ProjectManager {
     fun openProject(context: Context, onComplete: (String, List<FileNode>) -> Unit) {
         init(context)
         val rootDir = getRamsEditorDir(context)
-        val dirs = rootDir.listFiles()?.filter { it.isDirectory }
+        val dirs = rootDir.listFiles()?.filter { it.isDirectory } ?: emptyList()
 
-        if (dirs.isNullOrEmpty()) {
-            createNewProject(context, onComplete)
-            return
-        }
+        val labels = ArrayList<String>()
+        if (dirs.isNotEmpty()) labels.add("Open Existing")
+        labels.add("Create New")
+        labels.add("Clone from Git")
 
-        val options = arrayOf("Open Existing", "Create New")
         android.app.AlertDialog.Builder(context)
             .setTitle("Projects")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
+            .setItems(labels.toTypedArray()) { _, which ->
+                when (labels[which]) {
+                    "Open Existing" -> {
                         val names = dirs.map { it.name }.toTypedArray()
                         android.app.AlertDialog.Builder(context)
                             .setTitle("Open Project")
@@ -45,10 +44,100 @@ object ProjectManager {
                             .setNegativeButton("Cancel", null)
                             .show()
                     }
-                    1 -> createNewProject(context, onComplete)
+                    "Create New" -> createNewProject(context, onComplete)
+                    "Clone from Git" -> cloneProject(context, onComplete)
                 }
             }
             .show()
+    }
+
+    fun cloneProject(context: Context, onComplete: (String, List<FileNode>) -> Unit) {
+        init(context)
+        GitManager.init(context)
+        val prefs = context.getSharedPreferences("git", Context.MODE_PRIVATE)
+
+        val urlInput = android.widget.EditText(context)
+        urlInput.hint = "https://github.com/you/repo.git"
+        urlInput.setSingleLine()
+
+        val tokenInput = android.widget.EditText(context)
+        tokenInput.hint = "Token (only for private repos)"
+        tokenInput.setSingleLine()
+        tokenInput.inputType = android.text.InputType.TYPE_CLASS_TEXT or
+            android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        tokenInput.setText(prefs.getString("token", "") ?: "")
+
+        val layout = android.widget.LinearLayout(context)
+        layout.orientation = android.widget.LinearLayout.VERTICAL
+        layout.setPadding(50, 20, 50, 20)
+        layout.addView(urlInput)
+        layout.addView(tokenInput)
+
+        android.app.AlertDialog.Builder(context)
+            .setTitle("Clone from Git")
+            .setView(layout)
+            .setPositiveButton("Clone") { _, _ ->
+                var url = urlInput.text.toString().trim()
+                val token = tokenInput.text.toString().trim()
+                if (url.isEmpty()) return@setPositiveButton
+                if (!url.contains("://")) url = "https://$url"
+                val base = url.trimEnd('/').substringAfterLast('/')
+                    .removeSuffix(".git")
+                    .ifBlank { "project" }
+                val root = getRamsEditorDir(context)
+                var dest = File(root, base)
+                var n = 2
+                while (dest.exists()) {
+                    dest = File(root, "$base-$n")
+                    n++
+                }
+                runClone(context, url, token, dest, prefs, onComplete)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun runClone(
+        context: Context,
+        url: String,
+        token: String,
+        dest: File,
+        prefs: android.content.SharedPreferences,
+        onComplete: (String, List<FileNode>) -> Unit
+    ) {
+        val progress = android.app.AlertDialog.Builder(context)
+            .setTitle("Cloning…")
+            .setMessage(url)
+            .setCancelable(false)
+            .show()
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        Thread {
+            var error: String? = null
+            try {
+                GitManager.clone(url, token, dest)
+            } catch (e: Exception) {
+                error = e.message ?: e.javaClass.simpleName
+                dest.deleteRecursively()
+            }
+            val err = error
+            main.post {
+                progress.dismiss()
+                if (err != null) {
+                    android.app.AlertDialog.Builder(context)
+                        .setTitle("Clone failed")
+                        .setMessage(err)
+                        .setPositiveButton("OK", null)
+                        .show()
+                } else {
+                    // Remember the token if none was saved yet
+                    if (token.isNotEmpty() && prefs.getString("token", "").isNullOrEmpty()) {
+                        prefs.edit().putString("token", token).apply()
+                    }
+                    currentProjectDir = dest
+                    onComplete(dest.name, buildFileTree(dest))
+                }
+            }
+        }.start()
     }
     
     fun setCurrentProject(dir: File) {
@@ -108,7 +197,7 @@ object ProjectManager {
 
    fun buildFileTree(dir: File, depth: Int = 0): List<FileNode> {
     val nodes = mutableListOf<FileNode>()
-    val files = dir.listFiles()?.sortedWith(
+    val files = dir.listFiles()?.filter { it.name != ".git" }?.sortedWith(
         compareBy({ !it.isDirectory }, { it.name })
     ) ?: return nodes
 

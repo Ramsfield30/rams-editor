@@ -26,6 +26,18 @@
             android:letterSpacing="0.1"/>
 
         <TextView
+            android:id="@+id/btnGit"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="Git"
+            android:textColor="#BBBBBB"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="center"/>
+
+        <TextView
             android:id="@+id/btnNewFile"
             android:layout_width="32dp"
             android:layout_height="32dp"

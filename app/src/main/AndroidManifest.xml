@@ -51,6 +51,11 @@
             android:name=".DeviceEmulatorActivity"
             android:windowSoftInputMode="adjustPan"/>
 
+        <activity
+            android:name=".GitActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"/>
+
     </application>
 
 </manifest>
