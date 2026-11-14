@@ -742,10 +742,20 @@
                 android:paddingBottom="8dp"/>
 
             <TextView
+                android:id="@+id/versionText"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:text="Version 1.0"
+                android:text="Version"
                 android:textColor="#CCCCCC"
+                android:textSize="14sp"
+                android:gravity="center_vertical"/>
+
+            <TextView
+                android:id="@+id/btnCheckUpdate"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Check for updates"
+                android:textColor="#2196F3"
                 android:textSize="14sp"
                 android:gravity="center_vertical"/>
 

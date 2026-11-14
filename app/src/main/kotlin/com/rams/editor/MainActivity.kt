@@ -162,6 +162,7 @@ class MainActivity : AppCompatActivity() {
                 9001
             )
         }
+        Updater.checkOnStart(this)
 
         findViewById<TextView>(R.id.btnNewFile).setOnClickListener {
             if (ProjectManager.getCurrentProject() == null) {

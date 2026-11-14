@@ -54,7 +54,7 @@ object ProjectManager {
     fun cloneProject(context: Context, onComplete: (String, List<FileNode>) -> Unit) {
         init(context)
         GitManager.init(context)
-        val prefs = context.getSharedPreferences("git", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("rams_settings", Context.MODE_PRIVATE)
 
         val urlInput = android.widget.EditText(context)
         urlInput.hint = "https://github.com/you/repo.git"
@@ -65,7 +65,7 @@ object ProjectManager {
         tokenInput.setSingleLine()
         tokenInput.inputType = android.text.InputType.TYPE_CLASS_TEXT or
             android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        tokenInput.setText(prefs.getString("token", "") ?: "")
+        tokenInput.setText(prefs.getString("git_token", "") ?: "")
 
         val layout = android.widget.LinearLayout(context)
         layout.orientation = android.widget.LinearLayout.VERTICAL
@@ -130,8 +130,8 @@ object ProjectManager {
                         .show()
                 } else {
                     // Remember the token if none was saved yet
-                    if (token.isNotEmpty() && prefs.getString("token", "").isNullOrEmpty()) {
-                        prefs.edit().putString("token", token).apply()
+                    if (token.isNotEmpty() && prefs.getString("git_token", "").isNullOrEmpty()) {
+                        prefs.edit().putString("git_token", token).apply()
                     }
                     currentProjectDir = dest
                     onComplete(dest.name, buildFileTree(dest))

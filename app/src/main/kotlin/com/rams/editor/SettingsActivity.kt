@@ -248,6 +248,13 @@ class SettingsActivity : AppCompatActivity() {
                 .putString("git_token", gitToken.text.toString()).apply()
         }
 
+        // Version + updates
+        findViewById<TextView>(R.id.versionText).text =
+            "Version " + Updater.currentVersionName(this)
+        findViewById<TextView>(R.id.btnCheckUpdate).setOnClickListener {
+            Updater.checkNow(this)
+        }
+
         // GitHub link
         findViewById<TextView>(R.id.btnGithub).setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW,

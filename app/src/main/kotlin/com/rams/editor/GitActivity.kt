@@ -34,7 +34,7 @@ class GitActivity : AppCompatActivity() {
     private lateinit var btnPull: Button
     private var currentRemote = ""
 
-    private val prefs by lazy { getSharedPreferences("git", Context.MODE_PRIVATE) }
+    private val prefs by lazy { getSharedPreferences("rams_settings", Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -123,8 +123,8 @@ class GitActivity : AppCompatActivity() {
             toast("Write a commit message first")
             return
         }
-        val name = (prefs.getString("name", "") ?: "").trim()
-        val email = (prefs.getString("email", "") ?: "").trim()
+        val name = (prefs.getString("git_username", "") ?: "").trim()
+        val email = (prefs.getString("git_email", "") ?: "").trim()
         if (name.isEmpty() || email.isEmpty()) {
             toast("Set your name and email first")
             showCredentials()
@@ -139,25 +139,25 @@ class GitActivity : AppCompatActivity() {
 
     private fun doPush() {
         work("Pushing…") {
-            val token = (prefs.getString("token", "") ?: "").trim()
+            val git_token = (prefs.getString("git_token", "") ?: "").trim()
             when {
-                token.isEmpty() -> "Add your GitHub token first (⚙)"
+                git_token.isEmpty() -> "Add your GitHub token first (⚙)"
                 GitManager.remoteUrl(dir).isBlank() -> "Add the repository URL first (⚙)"
                 !GitManager.hasCommits(dir) -> "Commit something first"
-                else -> GitManager.push(dir, token)
+                else -> GitManager.push(dir, git_token)
             }
         }
     }
 
     private fun doPull() {
         work("Pulling…") {
-            val token = (prefs.getString("token", "") ?: "").trim()
+            val git_token = (prefs.getString("git_token", "") ?: "").trim()
             when {
-                token.isEmpty() -> "Add your GitHub token first (⚙)"
+                git_token.isEmpty() -> "Add your GitHub token first (⚙)"
                 GitManager.remoteUrl(dir).isBlank() -> "Add the repository URL first (⚙)"
                 !GitManager.hasCommits(dir) -> "Commit something first, then pull"
                 else -> {
-                    val r = GitManager.pull(dir, token)
+                    val r = GitManager.pull(dir, git_token)
                     setResult(RESULT_OK)
                     r
                 }
@@ -286,9 +286,9 @@ class GitActivity : AppCompatActivity() {
         }
 
         val urlF = field("Repository URL (https://github.com/you/repo.git)", currentRemote)
-        val tokenF = field("GitHub token", prefs.getString("token", "") ?: "", true)
-        val nameF = field("Your name (for commits)", prefs.getString("name", "") ?: "")
-        val emailF = field("Your email (for commits)", prefs.getString("email", "") ?: "")
+        val tokenF = field("GitHub token", prefs.getString("git_token", "") ?: "", true)
+        val nameF = field("Your name (for commits)", prefs.getString("git_username", "") ?: "")
+        val emailF = field("Your email (for commits)", prefs.getString("git_email", "") ?: "")
         val info = TextView(this).apply {
             text = "Make the token on GitHub: Settings, Developer settings, Personal access " +
                 "tokens. Give it write access to your repository's contents. " +
@@ -311,9 +311,9 @@ class GitActivity : AppCompatActivity() {
             .setView(box)
             .setPositiveButton("Save") { _, _ ->
                 prefs.edit()
-                    .putString("token", tokenF.text.toString().trim())
-                    .putString("name", nameF.text.toString().trim())
-                    .putString("email", emailF.text.toString().trim())
+                    .putString("git_token", tokenF.text.toString().trim())
+                    .putString("git_username", nameF.text.toString().trim())
+                    .putString("git_email", emailF.text.toString().trim())
                     .apply()
                 val url = urlF.text.toString().trim()
                 Thread {
