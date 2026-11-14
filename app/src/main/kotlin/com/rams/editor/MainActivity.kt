@@ -109,7 +109,7 @@ class MainActivity : AppCompatActivity() {
             codeEditor.insertSnippet(code, cursorOffset)
         }
 
-        setupCursorKeys()
+        KeyRow(this, codeEditor, { showGoToLine() }, { setupFindPanel() }).setup()
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -826,78 +826,6 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    private fun setupCursorKeys() {
-        fun move(dx: Int, dy: Int) {
-            val text = codeEditor.text ?: return
-            val pos = codeEditor.selectionStart.coerceAtLeast(0)
-            if (dy == 0) {
-                codeEditor.setSelection((pos + dx).coerceIn(0, text.length))
-                return
-            }
-            codeEditor.moveCursorLines(dy)
-        }
-
-        bindRepeat(findViewById(R.id.keyLeft)) { move(-1, 0) }
-        bindRepeat(findViewById(R.id.keyRight)) { move(1, 0) }
-        bindRepeat(findViewById(R.id.keyUp)) { move(0, -1) }
-        bindRepeat(findViewById(R.id.keyDown)) { move(0, 1) }
-        findViewById<TextView>(R.id.keyGoto).setOnClickListener { showGoToLine() }
-        setupFindPanel()
-        findViewById<TextView>(R.id.keyUndo).setOnClickListener { codeEditor.undo() }
-        findViewById<TextView>(R.id.keyRedo).setOnClickListener { codeEditor.redo() }
-        
-        findViewById<TextView>(R.id.keyTools).setOnClickListener { anchor ->
-            val menu = android.widget.PopupMenu(this, anchor)
-            menu.menu.add(0, 1, 0, "Toggle comment")
-            menu.menu.add(0, 2, 1, "Duplicate line")
-            menu.menu.add(0, 3, 2, "Delete line")
-            menu.menu.add(0, 4, 3, "Move line up")
-            menu.menu.add(0, 5, 4, "Move line down")
-            menu.menu.add(0, 6, 5, "Indent")
-            menu.menu.add(0, 7, 6, "Outdent")
-            menu.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    1 -> codeEditor.toggleComment()
-                    2 -> codeEditor.duplicateLines()
-                    3 -> codeEditor.deleteLines()
-                    4 -> codeEditor.moveLinesUp()
-                    5 -> codeEditor.moveLinesDown()
-                    6 -> codeEditor.indentLines()
-                    7 -> codeEditor.outdentLines()
-                }
-                true
-            }
-            menu.show()
-        }
-        
-        findViewById<TextView>(R.id.keyTab).setOnClickListener { codeEditor.tabKey() }
-    }
-
-    // One tap moves once. Holding the key repeats it.
-    private fun bindRepeat(view: View, action: () -> Unit) {
-        val handler = Handler(Looper.getMainLooper())
-        val repeat = object : Runnable {
-            override fun run() {
-                action()
-                handler.postDelayed(this, 70)
-            }
-        }
-        view.setOnTouchListener { v, e ->
-            when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    v.isPressed = true
-                    action()
-                    handler.postDelayed(repeat, 400)
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    v.isPressed = false
-                    handler.removeCallbacks(repeat)
-                }
-            }
-            true
-        }
     }
 
     private fun setupConsole() {

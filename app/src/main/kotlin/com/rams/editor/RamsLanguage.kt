@@ -224,32 +224,33 @@ class RamsAnalyzeManager(var fileName: String) : AnalyzeManager {
         return styles
     }
 
-    // Indent guides: one block for each indented region
+    // Indent guides: one block for each indented region.
+    // sora draws a guide between startLine and endLine, not on those two lines themselves,
+    // so the block starts on the parent line and ends one line after the last child.
     private fun buildBlocks(code: String): MutableList<CodeBlock> {
         val blocks = ArrayList<CodeBlock>()
         val stackLine = ArrayList<Int>()
         val stackIndent = ArrayList<Int>()
+        val lines = code.split('\n')
+        val maxLine = lines.size - 1
         var lastReal = -1
-        var i = 0
-        for (raw in code.split('\n')) {
-            val text = raw.trimEnd('\r')
-            if (text.isNotBlank()) {
-                val indent = text.length - text.trimStart(' ', '\t').length
-                while (stackIndent.isNotEmpty() && stackIndent[stackIndent.size - 1] >= indent) {
-                    val k = stackIndent.size - 1
-                    addBlock(blocks, stackLine[k], stackIndent[k], lastReal)
-                    stackLine.removeAt(k)
-                    stackIndent.removeAt(k)
-                }
-                stackLine.add(i)
-                stackIndent.add(indent)
-                lastReal = i
+        for (i in lines.indices) {
+            val text = lines[i].trimEnd('\r')
+            if (text.isBlank()) continue
+            val indent = text.length - text.trimStart(' ', '\t').length
+            while (stackIndent.isNotEmpty() && stackIndent[stackIndent.size - 1] >= indent) {
+                val k = stackIndent.size - 1
+                addBlock(blocks, stackLine[k], stackIndent[k], lastReal, maxLine)
+                stackLine.removeAt(k)
+                stackIndent.removeAt(k)
             }
-            i++
+            stackLine.add(i)
+            stackIndent.add(indent)
+            lastReal = i
         }
         while (stackIndent.isNotEmpty()) {
             val k = stackIndent.size - 1
-            addBlock(blocks, stackLine[k], stackIndent[k], lastReal)
+            addBlock(blocks, stackLine[k], stackIndent[k], lastReal, maxLine)
             stackLine.removeAt(k)
             stackIndent.removeAt(k)
         }
@@ -257,13 +258,18 @@ class RamsAnalyzeManager(var fileName: String) : AnalyzeManager {
         return blocks
     }
 
-    private fun addBlock(out: MutableList<CodeBlock>, parentLine: Int, indent: Int, lastLine: Int) {
-        val first = parentLine + 1
-        if (lastLine < first) return
+    private fun addBlock(
+        out: MutableList<CodeBlock>,
+        parentLine: Int,
+        indent: Int,
+        lastLine: Int,
+        maxLine: Int
+    ) {
+        if (lastLine <= parentLine) return
         out.add(CodeBlock().apply {
-            startLine = first
+            startLine = parentLine
             startColumn = indent
-            endLine = lastLine
+            endLine = minOf(lastLine + 1, maxLine)
             endColumn = indent
         })
     }
