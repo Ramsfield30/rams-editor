@@ -69,6 +69,8 @@ class CodeEditor @JvmOverloads constructor(
         scheme.setColor(EditorColorScheme.LINE_NUMBER, Color.parseColor("#858585"))
         scheme.setColor(EditorColorScheme.LINE_DIVIDER, Color.parseColor("#3C3C3C"))
         scheme.setColor(EditorColorScheme.CURRENT_LINE, Color.parseColor("#282828"))
+                scheme.setColor(EditorColorScheme.BLOCK_LINE, Color.parseColor("#4A4A4A"))
+        scheme.setColor(EditorColorScheme.BLOCK_LINE_CURRENT, Color.parseColor("#8A8A8A"))
         scheme.setColor(EditorColorScheme.SELECTED_TEXT_BACKGROUND, Color.parseColor("#264F78"))
         for (i in 1 until SyntaxHighlighter.PALETTE.size) {
             scheme.setColor(SyntaxHighlighter.COLOR_BASE + i, SyntaxHighlighter.PALETTE[i])
