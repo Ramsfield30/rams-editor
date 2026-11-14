@@ -80,7 +80,7 @@ class SnippetBar(
         SnippetStore.load(context).forEach { (label, rawCode) ->
             val marker = rawCode.indexOf("\$0")
             val code = rawCode.replace("\$0", "")
-            addChip(row1, "★ $label", code, if (marker >= 0) marker else code.length, true)
+            addChip(row1, label, code, if (marker >= 0) marker else code.length)
         }
 
         val snippets = when (fileExtension) {
